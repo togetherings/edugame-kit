@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>My game</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main>
+    <h1 data-t="title">My game</h1>
+    <section id="intro">
+      <p data-t="intro"></p>
+      <p class="muted" id="best"></p>
+      <button type="button" id="start" data-t="start">Start</button>
+    </section>
+    <section id="play" hidden>
+      <p class="question" id="question" aria-live="polite"></p>
+      <form id="form" autocomplete="off">
+        <input id="answer" type="number" inputmode="numeric" required aria-labelledby="question">
+        <button type="submit">OK</button>
+      </form>
+    </section>
+    <section id="done" hidden>
+      <p class="result" id="result" role="status"></p>
+      <p id="new-best" data-t="new_best" hidden></p>
+      <button type="button" id="again" data-t="again">Play again</button>
+    </section>
+  </main>
+  <!-- edugame-config.js and edugame.js are made by "edugame build"; keep these two lines. -->
+  <script src="edugame-config.js"></script>
+  <script src="edugame.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+{
+  "title": "Mon jeu",
+  "description": "Réponds à dix additions le plus vite possible.",
+  "score_label": "Bonnes réponses",
+  "score_unit": "bonnes",
+  "intro": "Réponds à dix additions. Le moins d'erreurs gagne, puis le temps le plus court.",
+  "start": "Commencer",
+  "question": "{n} sur 10 : combien font {a} + {b} ?",
+  "result": "Tu as {score} bonnes réponses en {seconds} secondes.",
+  "new_best": "C'est ton meilleur résultat !",
+  "best": "Ton meilleur : {best} bonnes réponses.",
+  "again": "Rejouer"
+}

@@ -1,0 +1,32 @@
+{
+  "format": 1,
+  "type": "scored",
+  "id": "org.togetherings.number-hunt",
+  "version": "1.0.0",
+  "languages": ["en", "fr"],
+  "icon": "icon.svg",
+  "color": "#2f6f8f",
+  "scoring": {
+    "order": "asc",
+    "counts": "first",
+    "tiebreak": "seconds",
+    "min": 1,
+    "max": 1000,
+    "grade": { "full": 1, "zero": 20 }
+  },
+  "settings": [
+    {
+      "key": "max",
+      "type": "choice",
+      "label": "Numbers to search",
+      "choices": [
+        { "value": 20, "label": "1 to 20" },
+        { "value": 100, "label": "1 to 100" },
+        { "value": 1000, "label": "1 to 1000" }
+      ],
+      "default": 100
+    }
+  ],
+  "authors": ["Togetherings"],
+  "license": "MIT"
+}

@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Number Hunt</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main>
+    <section id="intro" class="screen">
+      <h1 data-t="title">Number Hunt</h1>
+      <p class="lead" id="intro-text"></p>
+      <p class="note" id="intro-rule"></p>
+      <button type="button" class="go" id="btn-start" data-t="start">Start</button>
+      <p class="note warn" id="intro-error" role="alert" hidden></p>
+    </section>
+
+    <section id="play" class="screen" hidden>
+      <div class="line-wrap" aria-hidden="true">
+        <div class="line" id="line">
+          <div class="window" id="window"></div>
+        </div>
+        <div class="ends"><span id="end-low">1</span><span id="end-high">100</span></div>
+      </div>
+      <p class="prompt" id="prompt" aria-live="polite"></p>
+      <form id="guess-form" autocomplete="off">
+        <label for="guess" class="visually-hidden" data-t="your_guess">Your guess</label>
+        <input id="guess" type="number" inputmode="numeric" required>
+        <button type="submit" class="go" id="btn-guess" data-t="guess">Guess</button>
+      </form>
+      <p class="note warn" id="play-error" role="alert" hidden></p>
+      <ol class="history" id="history" data-t-attr="aria-label:your_guesses"></ol>
+    </section>
+
+    <section id="done" class="screen" hidden>
+      <h1 id="done-title"></h1>
+      <p class="lead" id="done-summary"></p>
+      <p class="note" id="done-standing"></p>
+      <table class="board" id="board" hidden>
+        <thead><tr><th>#</th><th data-t="board_name">Name</th><th class="num" data-t="score_label">Guesses</th><th class="num" data-t="board_time">Time</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <div class="actions">
+        <button type="button" class="go" id="btn-again" data-t="again">Play again</button>
+        <button type="button" id="btn-exit" data-t="exit">Back to games</button>
+      </div>
+    </section>
+  </main>
+  <script src="edugame-config.js"></script>
+  <script src="edugame.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>

@@ -1,0 +1,41 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "edugame-kit"
+dynamic = ["version"]
+description = "Make learning games that save everywhere: Kolibri, Moodle and other learning systems, RACHEL, Sugarizer and Kiwix."
+readme = "README.md"
+requires-python = ">=3.8"
+license = { text = "MIT" }
+authors = [{ name = "Togetherings" }]
+keywords = ["kolibri", "moodle", "scorm", "rachel", "sugarizer", "kiwix", "games", "education", "offline"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Topic :: Education",
+]
+dependencies = []  # standard library only
+
+[project.optional-dependencies]
+zim = ["libzim>=3.1"]
+
+[project.urls]
+Homepage = "https://github.com/togetherings/edugame-kit"
+Issues = "https://github.com/togetherings/edugame-kit/issues"
+
+[project.scripts]
+edugame = "edugame.cli:main"
+
+[tool.setuptools]
+packages = ["edugame"]
+
+[tool.setuptools.dynamic]
+version = { attr = "edugame.__version__" }
+
+[tool.setuptools.package-data]
+edugame = ["runtime/*", "templates/**/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
