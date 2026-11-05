@@ -182,7 +182,10 @@
 
   function scormBackend(api) {
     function get(name) { try { return api.LMSGetValue(name) || ""; } catch (e) { return ""; } }
-    function set(name, value) { try { return api.LMSSetValue(name, String(value)) === "true"; } catch (e) { return false; } }
+    // Systems answer "true" or true; Kolibri's may answer nothing. Only "false" means no.
+    function set(name, value) {
+      try { var ok = api.LMSSetValue(name, String(value)); return ok !== false && ok !== "false"; } catch (e) { return false; }
+    }
     function commit() { try { api.LMSCommit(""); } catch (e) { /* the system may not need it */ } }
     var finished = false;
     return {
@@ -379,10 +382,12 @@
 
   function save(data) {
     var text = JSON.stringify(data === undefined ? null : data);
-    if (backend && backend.name !== "kolibri-games" && text.length > MAX_SAVE) {
-      return Promise.reject(new Error("The save is too big (" + text.length + " characters; at most " + MAX_SAVE + ")."));
-    }
     return ready().then(function () {
+      // The plugin keeps up to 64 KB; everywhere else the SCORM 1.2 limit applies, so games
+      // behave the same on every platform.
+      if (backend.name !== "kolibri-games" && text.length > MAX_SAVE) {
+        throw new Error("The save is too big (" + text.length + " characters; at most " + MAX_SAVE + ").");
+      }
       record._save = data;
       return backend.write(record);
     });

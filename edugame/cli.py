@@ -110,11 +110,42 @@ def cmd_translate(args):
     print("lang/%s.json has %d words to translate (copied from %s)." % (code, len(added), p.language))
 
 
+def _signature(folder):
+    """Changes whenever a file in the game folder changes."""
+    sig = []
+    for root, dirs, names in os.walk(folder):
+        dirs[:] = [d for d in dirs if not d.startswith(".") and d not in projects.SKIP_NAMES]
+        for n in names:
+            try:
+                st = os.stat(os.path.join(root, n))
+                sig.append((root, n, st.st_mtime_ns, st.st_size))
+            except OSError:
+                pass
+    return hash(tuple(sorted(sig)))
+
+
 class _PreviewHandler(SimpleHTTPRequestHandler):
-    """Serves the test page at /test/ and the game, rebuilt on every page load, at /game/."""
+    """Serves the test page at /test/ and the game at /game/, rebuilt when its files change."""
 
     folder = None
-    built = None
+    state = None  # {"built": folder, "sig": signature, "lock": Lock, "old": [folders]}
+
+    @property
+    def built(self):
+        return self.state["built"]
+
+    def rebuild(self):
+        """Build into a new folder and switch to it, so requests already running still find their files."""
+        with self.state["lock"]:
+            sig = _signature(self.folder)
+            if sig == self.state["sig"]:
+                return
+            target = tempfile.mkdtemp(prefix="edugame-preview-")
+            build.build_folder(projects.load(self.folder), target)
+            self.state["old"].append(self.state["built"])
+            self.state["built"], self.state["sig"] = target, sig
+            while len(self.state["old"]) > 2:
+                shutil.rmtree(self.state["old"].pop(0), ignore_errors=True)
 
     def translate_path(self, path):
         path = path.split("?", 1)[0]
@@ -134,7 +165,7 @@ class _PreviewHandler(SimpleHTTPRequestHandler):
             return
         if self.path.split("?")[0].endswith(".html") and self.path.startswith("/game/"):
             try:
-                build.build_folder(projects.load(self.folder), self.built)
+                self.rebuild()
             except projects.ProjectError as e:
                 body = ("<h1>The game has problems</h1><ul>%s</ul>" % "".join("<li>%s</li>" % x for x in e.problems)).encode()
                 self.send_response(500)
@@ -153,9 +184,11 @@ class _PreviewHandler(SimpleHTTPRequestHandler):
 
 
 def make_preview_server(folder, port):
+    folder = os.path.abspath(folder)
     built = tempfile.mkdtemp(prefix="edugame-preview-")
     build.build_folder(projects.load(folder), built)
-    handler = type("Handler", (_PreviewHandler,), {"folder": os.path.abspath(folder), "built": built})
+    state = {"built": built, "sig": _signature(folder), "lock": threading.Lock(), "old": []}
+    handler = type("Handler", (_PreviewHandler,), {"folder": folder, "state": state})
     return ThreadingHTTPServer(("127.0.0.1", port), handler)
 
 

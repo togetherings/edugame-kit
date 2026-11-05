@@ -139,3 +139,25 @@ def test_new_game_from_a_template(tmp_path):
     copy = copy_game("saved", tmp_path)
     cli.main(["build", copy, "-o", str(tmp_path / "dist"), "--sugarizer"])
     assert sorted(os.listdir(str(tmp_path / "dist"))) == ["my-game-0.1.0-sugarizer.zip", "my-game-0.1.0.zip"]
+
+
+def test_preview_server_rebuilds_when_the_game_changes(tmp_path):
+    import threading
+    import urllib.request
+
+    from edugame import cli
+
+    folder = copy_game("saved", tmp_path)
+    server = cli.make_preview_server(folder, 0)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    base = "http://127.0.0.1:%d/" % server.server_address[1]
+    try:
+        assert b"edugame-test-scorm" in urllib.request.urlopen(base).read()  # redirected to the test page
+        assert b"<h1" in urllib.request.urlopen(base + "game/index.html").read()
+        with open(os.path.join(folder, "lang", "en.json"), "w") as f:
+            json.dump({"title": "Changed title"}, f)
+        urllib.request.urlopen(base + "game/index.html").read()
+        assert b"Changed title" in urllib.request.urlopen(base + "game/edugame-config.js").read()
+    finally:
+        server.shutdown()
+        server.server_close()
