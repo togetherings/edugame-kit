@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EduGame test page</title>
+<style>
+  :root { --bg: #f4f5f7; --panel: #fff; --text: #1d2330; --muted: #5b6474; --line: #d9dde4; --action: #2f5fd0; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #15181d; --panel: #1f242b; --text: #e8ebf0; --muted: #a2abb8; --line: #343b45; --action: #7ea2ff; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 15px/1.45 system-ui, sans-serif; background: var(--bg); color: var(--text); }
+  header { display: flex; flex-wrap: wrap; gap: .5rem 1rem; align-items: center; padding: .6rem 1rem; background: var(--panel); border-bottom: 1px solid var(--line); }
+  header h1 { font-size: 1rem; margin: 0 .5rem 0 0; }
+  label { color: var(--muted); }
+  label { max-width: 100%; }
+  select { max-width: 100%; }
+  select, button { font: inherit; padding: .25rem .5rem; border-radius: 6px; border: 1px solid var(--line); background: var(--panel); color: var(--text); }
+  button { cursor: pointer; }
+  main { display: grid; grid-template-columns: minmax(0, 1fr) 20rem; gap: 1rem; padding: 1rem; }
+  iframe { width: 100%; height: 75vh; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
+  aside { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: .75rem 1rem; overflow: auto; max-height: 75vh; }
+  aside h2 { font-size: .95rem; margin: .5rem 0 .25rem; }
+  pre { white-space: pre-wrap; word-break: break-all; font-size: .8rem; background: var(--bg); padding: .5rem; border-radius: 6px; margin: 0; }
+  .warn { color: #b3261e; }
+  @media (max-width: 760px) { main { grid-template-columns: 1fr; } iframe { height: 60vh; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>EduGame test page</h1>
+  <label>Play as <select id="mode">
+    <option value="scorm">a learning system (SCORM 1.2: Kolibri Learn, Moodle)</option>
+    <option value="local">a website (RACHEL, Kiwix: saves in this browser)</option>
+  </select></label>
+  <label>Language <select id="lang"></select></label>
+  <button type="button" id="reload">Reload the game</button>
+  <button type="button" id="reset">Delete the save</button>
+</header>
+<main>
+  <iframe id="game" title="The game"></iframe>
+  <aside>
+    <h2>What's saved</h2>
+    <p id="size"></p>
+    <pre id="saved">Nothing yet.</pre>
+    <h2>Learning system</h2>
+    <pre id="lms"></pre>
+    <h2>Calls</h2>
+    <pre id="log"></pre>
+  </aside>
+</main>
+<script>
+/* A pretend learning system for trying games: it gives the game a SCORM 1.2 API
+   (window.API, which games look for in their parent page) and shows what the
+   game saves. Saves are kept in this browser, so reloading carries on. */
+(function () {
+  "use strict";
+  var params = new URLSearchParams(location.search);
+  var gameUrl = params.get("game") || "../game/index.html";
+  var gameId = params.get("id") || "game";
+  var languages = (params.get("languages") || "en").split(",");
+  var key = "edugame-test-scorm:" + gameId;
+  var $ = function (id) { return document.getElementById(id); };
+  var log = [];
+
+  function load() { try { return JSON.parse(localStorage.getItem(key)) || {}; } catch (e) { return {}; } }
+  var cmi = load();
+  function store() { try { localStorage.setItem(key, JSON.stringify(cmi)); } catch (e) { /* private mode */ } show(); }
+  function note(text) { log.unshift(text); log = log.slice(0, 30); $("log").textContent = log.join("\n"); }
+
+  function show() {
+    var data = $("mode").value === "scorm" ? cmi["cmi.suspend_data"] : localGet();
+    $("saved").textContent = data ? pretty(data) : "Nothing yet.";
+    var len = data ? data.length : 0;
+    $("size").textContent = len + " of 4096 characters" + (len > 3900 ? " (too big for SCORM 1.2)" : "");
+    $("size").className = len > 3900 ? "warn" : "";
+    $("lms").textContent = $("mode").value === "scorm"
+      ? "lesson_status: " + (cmi["cmi.core.lesson_status"] || "not attempted") + "\nscore.raw: " + (cmi["cmi.core.score.raw"] || "")
+      : "(not used)";
+  }
+  function pretty(text) { try { return JSON.stringify(JSON.parse(text), null, 1); } catch (e) { return text; } }
+  function localGet() {
+    try { return $("game").contentWindow.localStorage.getItem("edugame:" + gameId); } catch (e) { return null; }
+  }
+
+  var scormApi = {
+    LMSInitialize: function () { note("LMSInitialize"); return "true"; },
+    LMSFinish: function () { note("LMSFinish"); return "true"; },
+    LMSGetValue: function (name) {
+      if (name === "cmi.core.student_name") return "Learner, Test";
+      if (name === "cmi.core.lesson_status") return cmi[name] || "not attempted";
+      return cmi[name] || "";
+    },
+    LMSSetValue: function (name, value) {
+      if (name === "cmi.suspend_data" && String(value).length > 4096) { note("refused: suspend_data over 4096"); return "false"; }
+      cmi[name] = String(value); note("set " + name); store(); return "true";
+    },
+    LMSCommit: function () { return "true"; },
+    LMSGetLastError: function () { return "0"; },
+    LMSGetErrorString: function () { return ""; },
+    LMSGetDiagnostic: function () { return ""; }
+  };
+
+  languages.forEach(function (code) { var o = document.createElement("option"); o.value = o.textContent = code; $("lang").appendChild(o); });
+  try { $("mode").value = localStorage.getItem("edugame-test-mode") || "scorm"; } catch (e) { /* default */ }
+
+  function start() {
+    var mode = $("mode").value;
+    try { localStorage.setItem("edugame-test-mode", mode); } catch (e) { /* fine */ }
+    if (mode === "scorm") window.API = scormApi; else delete window.API;
+    var sep = gameUrl.indexOf("?") < 0 ? "?" : "&";
+    $("game").src = gameUrl + sep + "lang=" + encodeURIComponent($("lang").value) + "&t=" + Date.now();
+    note("opened as " + (mode === "scorm" ? "a learning system" : "a website"));
+    setTimeout(show, 500);
+  }
+  $("mode").addEventListener("change", start);
+  $("lang").addEventListener("change", start);
+  $("reload").addEventListener("click", start);
+  $("reset").addEventListener("click", function () {
+    cmi = {}; store();
+    try { $("game").contentWindow.localStorage.removeItem("edugame:" + gameId); } catch (e) { /* not reachable */ }
+    start();
+  });
+  setInterval(show, 1000);
+  start();
+})();
+</script>
+</body>
+</html>

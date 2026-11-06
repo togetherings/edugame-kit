@@ -1,0 +1,32 @@
+{
+  "format": 1,
+  "type": "scored",
+  "id": "org.togetherings.memory-match",
+  "version": "1.0.0",
+  "languages": ["en", "fr"],
+  "icon": "icon.svg",
+  "color": "#8a4f9e",
+  "scoring": {
+    "order": "asc",
+    "counts": "best",
+    "tiebreak": "seconds",
+    "min": 1,
+    "max": 1000,
+    "grade": { "full": 8, "zero": 40 }
+  },
+  "settings": [
+    {
+      "key": "pairs",
+      "type": "choice",
+      "label": "Number of pairs",
+      "choices": [
+        { "value": 6, "label": "6 pairs (easy)" },
+        { "value": 8, "label": "8 pairs" },
+        { "value": 12, "label": "12 pairs (hard)" }
+      ],
+      "default": 8
+    }
+  ],
+  "authors": ["Togetherings"],
+  "license": "MIT"
+}

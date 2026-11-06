@@ -1,0 +1,18 @@
+{
+  "format": 1,
+  "type": "scored",
+  "id": "org.example.my-game",
+  "version": "0.1.0",
+  "languages": ["en", "fr"],
+  "icon": "icon.svg",
+  "color": "#8a4b14",
+  "scoring": {
+    "order": "desc",
+    "tiebreak": "seconds",
+    "counts": "best",
+    "min": 0,
+    "max": 10
+  },
+  "authors": ["Your name"],
+  "license": "CC-BY-4.0"
+}

@@ -1,0 +1,13 @@
+{
+  "title": "My game",
+  "description": "Answer ten sums as fast as you can.",
+  "score_label": "Right answers",
+  "score_unit": "right",
+  "intro": "Answer ten sums. Fewer mistakes win, then faster times.",
+  "start": "Start",
+  "question": "{n} of 10: what is {a} + {b}?",
+  "result": "You got {score} right in {seconds} seconds.",
+  "new_best": "That's your best yet!",
+  "best": "Your best: {best} right.",
+  "again": "Play again"
+}
