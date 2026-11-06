@@ -8,7 +8,8 @@ where it is and saves the best way there.
 ```js
 EduGame.ready().then(function (info) {
   // info.save       what you saved last time, or null
-  // info.best       Scored Games: the learner's best score, or null
+  // info.results    Scored Games: the learner's kept result on each level, {main: {score: 7, time: 41.5, plays: 3}}
+  // info.best       the first ranked score of "main" (games without levels), or null
   // info.bestSeconds, info.plays
   // info.settings   the settings (from Kolibri Games, or the defaults in edugame.json)
   // info.language   the language chosen, like "fr"
@@ -20,12 +21,15 @@ EduGame.ready().then(function (info) {
 EduGame.save({ level: 3, stars: [1, 1, 0] });  // a Promise; call it after each step
 EduGame.complete();                            // the learner has finished the activity
 
-// Scored Games
+// Scored Games (see SCORING.md)
 EduGame.start();                       // a round begins: the helper starts timing it
+EduGame.start({ board: "en-02" });     // ... on a level
 EduGame.finish(12).then(function (r) { // the round's score
-  // r.score, r.seconds, r.best, r.newBest
+  // r.score, r.values, r.seconds, r.kept (the learner's result now), r.best, r.newBest
   // r.platform: on the Kolibri Games games page, the plugin's result ({attempt, standing}), else null
 });
+EduGame.finish({ acc: 97, wpm: 41 });           // several scores
+EduGame.finish({ acc: 72, wpm: 9 }, { passed: false });  // played, but not a result
 
 EduGame.t("found", { n: 3 });   // the translated text for "found", with {n} filled in
 EduGame.translatePage();        // fill in data-t elements again (ready() does it once)
@@ -33,7 +37,7 @@ EduGame.exit();                 // go back, where info.canExit
 
 // Only do something on the Kolibri Games games page (safe to call anywhere):
 EduGame.move("guess", { value: 42 });   // coaches see every move
-EduGame.scoreboard();                   // Promise of {rows: [...]}, or null elsewhere
+EduGame.scoreboard({ board: "en-02" }); // Promise of {rows: [...], boards}, or null elsewhere
 EduGame.on("timeup", function () {});   // the coach's time limit ran out
 ```
 
@@ -47,7 +51,7 @@ The helper checks, in this order:
 | Where | How it knows | Saves | Scores |
 |---|---|---|---|
 | **Kolibri Games games page** | the game is served from the plugin's `play/` address | `KolibriGames.setState` (up to 64 KB), in the learner's account | the plugin's attempts: scoreboards, challenges, every move for coaches |
-| **SCORM 1.2**: Kolibri Learn, Moodle, other learning systems | a SCORM `API` object in this page or a parent page | `cmi.suspend_data` (up to 4,096 characters) | kept in `cmi.suspend_data`; a 0-100 grade in `cmi.core.score.raw` |
+| **SCORM 1.2**: Kolibri Learn, Moodle, other learning systems | a SCORM `API` object in this page or a parent page (inside a frame, it waits up to 1.5 seconds for it, and keeps looking for 10) | `cmi.suspend_data` (up to 4,096 characters) | kept in `cmi.suspend_data`; outside Kolibri, a 0-100 grade in `cmi.core.score.raw` |
 | **Sugarizer** with sugar-web | built with `--sugar-lib` | the Journal entry of this activity | kept with the save |
 | **Anywhere else**: RACHEL, Kiwix, a website | nothing above | the browser's `localStorage`, under `edugame:<id>` | kept with the save |
 
@@ -63,11 +67,16 @@ Outside Kolibri Games, the helper keeps one JSON object:
 ```
 
 - `_save` is what the game passed to `EduGame.save()`.
-- `main` (Scored Games) is `[best score, seconds for that score, times played]`.
+- Every other key (Scored Games) is a level, or `main` for a game without levels, holding the
+  learner's kept result: one value for each of `scoring.fields`, in that order. For one score
+  that's `[score, seconds, times played]`.
 
-Kolibri Games reads `main` to show **scoreboards for Scored Games in Kolibri channels**, and
+Kolibri Games reads these to show **scoreboards for Scored Games in Kolibri channels**, and
 skips keys that start with `_`. In SCORM systems, the helper also sets `cmi.core.lesson_status` to
-`incomplete` when the game opens and `completed` after `complete()` or a finished round.
+`incomplete` when the game opens and `passed` after `complete()` or a passed round (never
+`completed`, which Kolibri ignores). **It never sends Kolibri a score**: Kolibri reads a SCORM score
+as how much of a resource is done. Other learning systems get a grade when `scoring.grade` says
+how (see [SCORING.md](SCORING.md)).
 
 ## Things to know
 

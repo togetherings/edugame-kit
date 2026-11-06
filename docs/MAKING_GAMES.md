@@ -71,7 +71,7 @@ Don't add `edugame.js`, `edugame-config.js`, `kolibri-game.json`, `imsmanifest.x
 | `languages` | no | The languages the game is translated into, the default first. Default `["en"]`. Each needs `lang/<code>.json`. |
 | `entry` | no | The start page. Default `index.html`. |
 | `icon`, `color` | no | An icon file (SVG works everywhere) and an accent colour, used by Kolibri Games, RACHEL, Sugarizer and Kiwix. |
-| `scoring` | Scored Games | How scores compare. Below. |
+| `scoring` | Scored Games | What the scores are and how they compare: see [SCORING.md](SCORING.md). |
 | `settings` | no | Options coaches can change on the Kolibri Games games page (the format is in Kolibri Games' [GAME_FORMAT.md](https://github.com/togetherings/kolibri-games/blob/main/docs/GAME_FORMAT.md)). Everywhere else, the game gets the `default` values. |
 | `authors`, `license` | no | Shown by platforms that list them. |
 
@@ -80,16 +80,9 @@ The title and description come from the default language's `lang/<code>.json` (`
 
 ### `scoring`
 
-| Field | Meaning |
-|---|---|
-| `order` | `"asc"` if a lower score is better (guesses, moves), `"desc"` if higher is better (points). |
-| `tiebreak` | `"seconds"` (the default): a faster round wins a tie. `"none"` ignores time. |
-| `counts` | For Kolibri Games: which attempt counts on its scoreboards, `"first"` (later ones are practice) or `"best"`. Coaches can change it. |
-| `min`, `max` | Scores outside these are refused by Kolibri Games. |
-| `grade` | For learning systems' gradebooks: `{"full": score that gets 100%, "zero": score that gets 0%}`. Without it, `min` and `max` are used. |
-
-The score's name comes from `score_label` (and `score_unit`) in the language files, like
-`"Guesses"` and `"guesses"`.
+One score is short: `{"order": "asc", "tiebreak": "seconds", "counts": "first"}`. Several scores,
+each ranked its own way, and levels with a scoreboard each, use `fields`, `rank_by` and `boards`.
+See **[SCORING.md](SCORING.md)**.
 
 ## Commands
 
@@ -100,6 +93,7 @@ edugame preview my-game       # the test page; reload it after you change the ga
 edugame build my-game         # dist/<name>-<version>.zip
 edugame build my-game --sugarizer [--sugar-lib path/to/lib] --zim
 edugame translate my-game sw  # add Kiswahili: copies the English words to translate
+edugame pages my-game -o site # a GitHub Pages site (see platforms/GITHUB_PAGES.md)
 ```
 
 ### The test page

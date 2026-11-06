@@ -28,7 +28,9 @@ def test_the_universal_zip_has_every_platforms_files(tmp_path):
     assert not any(n.startswith("lang/") or n == "edugame.json" or "/" in n and n.endswith("/") for n in names)
     cfg = config_of(build.read_zip(path, "edugame-config.js").decode())
     assert cfg["id"] == p.id and cfg["languages"] == ["en", "fr"] and cfg["strings"]["fr"]["title"] == "Chasse au nombre"
-    assert cfg["settings"] == [{"key": "max", "default": 100}] and cfg["scoring"]["grade"] == {"full": 1, "zero": 20}
+    assert cfg["settings"] == [{"key": "max", "default": 100}]
+    assert cfg["scoring"]["grade"] == {"field": "score", "full": 1, "zero": 20}
+    assert [f["key"] for f in cfg["scoring"]["fields"]] == ["score", "time", "plays"] and cfg["scoring"]["primary"] == "score"
 
 
 def test_building_twice_gives_the_same_zip(tmp_path):
@@ -121,7 +123,7 @@ def test_kolibri_games_reads_scores_the_helper_saves():
     from kolibri_games import manifest as mf
 
     m = mf.validate(number_hunt().kolibri_manifest())
-    # What edugame.js puts in cmi.suspend_data after two rounds.
+    # What edugame.js puts in cmi.suspend_data after two rounds: the fields' values, in order.
     saved = {"SCORM": {"cmi": {"suspend_data": json.dumps({"_v": 1, "_save": None, "main": [7, 21.4, 2]})}}}
     assert channel.read_boards(m.channel_spec, saved) == {"main": {"score": 7, "time": 21.4, "plays": 2}}
 
@@ -161,3 +163,38 @@ def test_preview_server_rebuilds_when_the_game_changes(tmp_path):
     finally:
         server.shutdown()
         server.server_close()
+
+
+def test_github_pages_site_counts_visits_but_the_zips_never_do(tmp_path):
+    from edugame import pages
+
+    p = number_hunt()
+    site = str(tmp_path / "site")
+    assert pages.build_pages(p, site, goatcounter="togetherings", repo="togetherings/edugame-kit") == "togetherings"
+    front = open(os.path.join(site, "index.html")).read()
+    game = open(os.path.join(site, "play", "index.html")).read()
+    for page in (front, game):
+        assert 'data-goatcounter="https://togetherings.goatcounter.com/count"' in page
+        assert page.index("goatcounter") < page.lower().index("</head>")
+    assert "edugame:finish" in game and "https://github.com/togetherings/edugame-kit/releases/latest" in front
+    assert "Chasse au nombre" in front and os.path.exists(os.path.join(site, ".nojekyll"))
+    assert not os.path.exists(os.path.join(site, "play", "imsmanifest.xml"))
+    # Built again without a code: no counting at all.
+    assert pages.build_pages(p, site) is None
+    assert "goatcounter" not in open(os.path.join(site, "play", "index.html")).read()
+    with pytest.raises(ValueError):
+        pages.build_pages(p, site, goatcounter="https://x.goatcounter.com")
+    # The zips for every platform never count anything.
+    for path in (build.build_zip(p, str(tmp_path)), build.build_sugarizer(p, str(tmp_path))):
+        with zipfile.ZipFile(path) as z:
+            assert not any(b"goatcounter" in z.read(n) or b"zgo.at" in z.read(n) for n in z.namelist()), path
+
+
+def test_new_game_with_a_github_pages_workflow(tmp_path):
+    from edugame import cli
+
+    folder = str(tmp_path / "puzzle")
+    cli.main(["new", folder, "--github"])
+    workflow = open(os.path.join(folder, ".github", "workflows", "pages.yml")).read()
+    assert "edugame pages . -o _site" in workflow and "vars.GOATCOUNTER_CODE" in workflow
+    assert not any(n.startswith(".github") for n in projects.load(folder).files())

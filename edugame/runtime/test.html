@@ -33,6 +33,7 @@
     <option value="local">a website (RACHEL, Kiwix: saves in this browser)</option>
   </select></label>
   <label>Language <select id="lang"></select></label>
+  <label title="Kolibri reads a SCORM score as how much is done, so games mustn't send one there"><input type="checkbox" id="as-kolibri"> Kolibri</label>
   <button type="button" id="reload">Reload the game</button>
   <button type="button" id="reset">Delete the save</button>
 </header>
@@ -105,6 +106,8 @@
 
   function start() {
     var mode = $("mode").value;
+    // Kolibri puts its own "kolibri" object on the page around the game: the helper then sends no score.
+    if ($("as-kolibri").checked) window.kolibri = { getVersion: function () { return "test"; } }; else delete window.kolibri;
     try { localStorage.setItem("edugame-test-mode", mode); } catch (e) { /* fine */ }
     if (mode === "scorm") window.API = scormApi; else delete window.API;
     var sep = gameUrl.indexOf("?") < 0 ? "?" : "&";
@@ -114,6 +117,7 @@
   }
   $("mode").addEventListener("change", start);
   $("lang").addEventListener("change", start);
+  $("as-kolibri").addEventListener("change", start);
   $("reload").addEventListener("click", start);
   $("reset").addEventListener("click", function () {
     cmi = {}; store();

@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Lessons test</title></head>
+<body>
+  <!-- A test game: finish a lesson with any accuracy and speed, passed or not. -->
+  <select id="board"><option value="l1">l1</option><option value="l2">l2</option></select>
+  <input id="acc" type="number" value="90"> <input id="wpm" type="number" value="20">
+  <button type="button" id="passed">Finish (passed)</button>
+  <button type="button" id="failed">Finish (not passed)</button>
+  <pre id="out">…</pre>
+  <script src="edugame-config.js"></script>
+  <script src="edugame.js"></script>
+  <script>
+    function done(passed) {
+      var board = document.getElementById("board").value;
+      EduGame.start({ board: board }).then(function () {
+        return EduGame.finish({ acc: Number(document.getElementById("acc").value), wpm: Number(document.getElementById("wpm").value) },
+                              { passed: passed });
+      }).then(function (r) {
+        document.getElementById("out").textContent = JSON.stringify({ board: r.board, kept: r.kept, newBest: r.newBest });
+      }, function (e) { document.getElementById("out").textContent = "error: " + e.message; });
+    }
+    document.getElementById("passed").onclick = function () { done(true); };
+    document.getElementById("failed").onclick = function () { done(false); };
+    EduGame.ready().then(function (info) {
+      document.getElementById("out").textContent = JSON.stringify({ ready: info.platform, results: info.results });
+    });
+  </script>
+</body>
+</html>
