@@ -1,6 +1,6 @@
 # Kolibri
 
-The game's zip works in Kolibri two ways. You can use both.
+Saved and Scored Games reach Kolibri through **Kolibri Studio**, as HTML5 apps in a channel.
 
 ## In a channel (Learn)
 
@@ -15,32 +15,25 @@ it in lessons and assign it to classes, like any other resource.
 Kolibri gives the game a SCORM connection, so the helper saves each learner's progress in their
 Kolibri account. Kolibri syncs it between servers, so learners can carry on from another device
 that syncs with this one. When the game calls `EduGame.complete()`, or a Scored Game finishes a
-round, Kolibri can show the resource as done.
+passed round, Kolibri shows the resource as done.
 
 **Scoreboards:** with [Kolibri Games](https://github.com/togetherings/kolibri-games) 0.2 or later
 on the device, Scored Games in channels appear on its games page under **Scored Games in Learn**,
-with scoreboards made from the scores they save. Coaches choose what learners see (names,
+with scoreboards made from the scores they save: one for each level or lesson, and one for the
+whole game if `scoring.boards.total` asks for it. Coaches choose what learners see (names,
 initials or only their own result) and can download them. Nothing else is needed: the zip already
 has the `kolibri-game.json` that tells Kolibri Games how to read them. Saved Games aren't listed
 there; they're just played in Learn.
 
-## On the Kolibri Games games page
+## Scores in Kolibri
 
-With the Kolibri Games plugin, a device administrator can also install the same zip on the games
-page:
+The helper never sends Kolibri a score: Kolibri reads a SCORM score as how much of a resource is
+done, so a resource would only count as done at 100. It sets the status instead: `incomplete`
+when the game opens, and `passed` after `EduGame.complete()` or a passed round. Scoreboards come
+from Kolibri Games, above.
 
-1. Open **Games** in Kolibri's menu, then **Setup**.
-2. Choose the zip and click **Install**.
-
-There the game uses the plugin's own saving and scores:
-
-- Saves go to the learner's account (up to 64 KB).
-- Scored Games get the plugin's scoreboards and **challenges**: a coach sets the game up for a
-  class with its own dates, time limit and settings.
-- Coaches can change the game's `settings` and see every move a game reports with
-  `EduGame.move()`.
-
-Installing a newer version on the Setup page keeps the old one, so you can go back.
+(Kolibri Games can also install a zip on its games page, which is handy for trying a game with
+coaches' challenges. Studio is the way to give games to learners.)
 
 ## Trying it
 

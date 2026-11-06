@@ -7,6 +7,7 @@ The edugame command.
     edugame build my-game                 dist/<name>-<version>.zip, the universal zip
     edugame build my-game --sugarizer --zim
     edugame translate my-game fr          add a language to translate
+    edugame pages my-game -o site         a GitHub Pages site for the game (with GoatCounter, if asked)
 """
 import argparse
 import functools
@@ -20,7 +21,7 @@ import threading
 import webbrowser
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 
-from . import __version__, build, project as projects
+from . import __version__, build, pages, project as projects
 
 TEMPLATES = os.path.join(os.path.dirname(os.path.abspath(__file__)), "templates")
 
@@ -55,10 +56,16 @@ def cmd_new(args):
     with open(lang, "w", encoding="utf-8") as f:
         json.dump(words, f, indent=2, ensure_ascii=False)
         f.write("\n")
+    if args.github:
+        workflows = os.path.join(args.folder, ".github", "workflows")
+        os.makedirs(workflows, exist_ok=True)
+        shutil.copy(os.path.join(TEMPLATES, "github", "pages.yml"), os.path.join(workflows, "pages.yml"))
     print("Made %s, a %s Game. Next:" % (args.folder, "Saved" if args.type == "saved" else "Scored"))
     print("  edugame preview %s    try it" % args.folder)
     print("  edugame build %s      make the zip" % args.folder)
     print("Change the id in edugame.json to one of your own before you share the game.")
+    if args.github:
+        print("For GitHub Pages: make the folder a repository, push it, and in Settings > Pages choose GitHub Actions.")
 
 
 def cmd_check(args):
@@ -84,6 +91,15 @@ def cmd_build(args):
             print(msg + " (skipped)", file=sys.stderr)
     for path in made:
         print("Made %s (%d KB)" % (path, (os.path.getsize(path) + 1023) // 1024))
+
+
+def cmd_pages(args):
+    p = _load(args.folder)
+    try:
+        code = pages.build_pages(p, args.out_dir, args.goatcounter, args.repo, events=not args.no_events)
+    except ValueError as e:
+        sys.exit(str(e))
+    print("Made the site in %s%s" % (args.out_dir, " (counted with GoatCounter: %s)" % code if code else " (no counting)"))
 
 
 def cmd_translate(args):
@@ -215,6 +231,7 @@ def main(argv=None):
     p.add_argument("--type", choices=("saved", "scored"), default="saved", help="Saved Games keep progress; Scored Games also keep a score")
     p.add_argument("--id", help="the game's id, like org.example.my-game")
     p.add_argument("--title")
+    p.add_argument("--github", action="store_true", help="also add a workflow that publishes the game to GitHub Pages")
     p.set_defaults(func=cmd_new)
 
     p = sub.add_parser("check", help="find problems and missing translations")
@@ -235,6 +252,14 @@ def main(argv=None):
     p.add_argument("--port", type=int, default=8100)
     p.add_argument("--no-browser", action="store_true")
     p.set_defaults(func=cmd_preview)
+
+    p = sub.add_parser("pages", help="make a GitHub Pages site: a front page and the game")
+    p.add_argument("folder")
+    p.add_argument("-o", "--out-dir", default="site")
+    p.add_argument("--goatcounter", help="count visits with this GoatCounter code (or set GOATCOUNTER_CODE)")
+    p.add_argument("--repo", help="owner/name on GitHub, to link the latest release")
+    p.add_argument("--no-events", action="store_true", help="count page views only, not rounds")
+    p.set_defaults(func=cmd_pages)
 
     p = sub.add_parser("translate", help="add a language (or the words it's missing)")
     p.add_argument("folder")

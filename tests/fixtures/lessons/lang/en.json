@@ -1,0 +1,11 @@
+{
+  "title": "Lessons test",
+  "description": "A test game like Lessons In Typing: two scores, a board for each lesson.",
+  "accuracy": "Accuracy",
+  "speed": "Speed",
+  "times_played": "Times played",
+  "lesson": "Lesson",
+  "lesson_1": "Lesson 1",
+  "lesson_2": "Lesson 2",
+  "all_lessons": "All lessons"
+}

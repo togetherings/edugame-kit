@@ -1,0 +1,50 @@
+# Publishes Number Hunt, one of the examples, to GitHub Pages, as the template in
+# edugame/templates/github/pages.yml does for a game's own repository.
+#
+# One-time setup:
+#   1. Settings > Pages > Source: GitHub Actions.
+#   2. To count visits with GoatCounter: Settings > Secrets and variables > Actions >
+#      Variables > New repository variable: GOATCOUNTER_CODE (for example togetherings).
+# See docs/platforms/GITHUB_PAGES.md.
+name: GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -e .
+      - name: Build the site
+        env:
+          GOATCOUNTER_CODE: ${{ vars.GOATCOUNTER_CODE }}
+        run: edugame pages examples/number-hunt -o _site --repo "${{ github.repository }}"
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

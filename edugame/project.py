@@ -16,7 +16,7 @@ edugame.json::
       "version": "1.0.0",
       "languages": ["en", "fr"],         the first is the default; each needs lang/<code>.json
       "icon": "icon.svg", "color": "#2f6f8f",
-      "scoring": {"order": "asc", "tiebreak": "seconds", "min": 1, "max": 1000},
+      "scoring": {"order": "asc", "tiebreak": "seconds", "min": 1, "max": 1000},   (see scoring.py)
       "settings": [...],                 options coaches can change in Kolibri Games
       "authors": ["..."], "license": "MIT"
     }
@@ -27,7 +27,7 @@ import json
 import os
 import re
 
-from . import FORMAT
+from . import FORMAT, scoring as scorer
 
 TYPES = ("saved", "scored")
 ID_RE = re.compile(r"^[a-z0-9][a-z0-9._-]{2,99}$")
@@ -74,6 +74,20 @@ class Project(object):
         return self.strings.get(language or self.language, {}).get(key) or self.strings[self.language].get(key, default)
 
     @property
+    def score_spec(self):
+        """The scoring section in full form (scoring.full), or None for Saved Games."""
+        return scorer.full(self.scoring) if self.scoring else None
+
+    def words(self, key, default=""):
+        """A word from the default language's lang file: ``key`` itself if it isn't a word there."""
+        found = self.strings[self.language].get(key)
+        if found:
+            return found
+        if key in scorer.DEFAULT_WORDS:
+            return scorer.DEFAULT_WORDS[key] or default
+        return key or default
+
+    @property
     def title(self):
         return self.text("title")
 
@@ -111,7 +125,7 @@ class Project(object):
             "strings": self.strings,
         }
         if self.scoring:
-            cfg["scoring"] = self.scoring
+            cfg["scoring"] = scorer.helper(self.score_spec, self.words)
         if self.settings:
             cfg["settings"] = [{"key": s["key"], "default": s["default"]} for s in self.settings]
         return cfg
@@ -136,33 +150,10 @@ class Project(object):
         if self.icon:
             m["icon"] = self.icon
         if self.scoring:
-            scoring = {k: v for k, v in self.scoring.items() if k != "grade"}  # grade is for learning systems
-            scoring.setdefault("label", self.text("score_label", default="Score"))
-            if self.text("score_unit"):
-                scoring.setdefault("unit", self.text("score_unit"))
-            m["scoring"] = scoring
+            m["scoring"] = scorer.kolibri(self.score_spec, self.words)
         if self.settings:
             m["settings"] = self.settings
         return m
-
-
-def _check_scoring(scoring, problems):
-    if not isinstance(scoring, dict):
-        problems.append("scoring must be an object.")
-        return
-    if scoring.get("order") not in ("asc", "desc"):
-        problems.append("scoring.order must be 'asc' (lower is better) or 'desc' (higher is better).")
-    if scoring.get("tiebreak", "seconds") not in ("seconds", "none"):
-        problems.append("scoring.tiebreak must be 'seconds' (faster wins ties) or 'none'.")
-    if scoring.get("counts", "first") not in ("first", "best"):
-        problems.append("scoring.counts must be 'first' or 'best'.")
-    for bound in ("min", "max"):
-        if bound in scoring and not isinstance(scoring[bound], (int, float)):
-            problems.append("scoring.%s must be a number." % bound)
-    grade = scoring.get("grade")
-    if grade is not None and not (isinstance(grade, dict) and all(isinstance(grade.get(k), (int, float)) for k in ("full", "zero"))
-                                  and grade["full"] != grade["zero"]):
-        problems.append("scoring.grade must be {\"full\": score for 100%, \"zero\": score for 0%}.")
 
 
 def _check_settings(settings, problems):
@@ -215,7 +206,7 @@ def load(folder):
         if "scoring" not in data:
             problems.append("Scored Games need a scoring section (is a lower or higher score better?).")
         else:
-            _check_scoring(data["scoring"], problems)
+            scorer.check(data["scoring"], problems)
     elif "scoring" in data:
         problems.append("Saved Games don't keep scores, so they can't have scoring. Use type 'scored'.")
     if "settings" in data:
@@ -237,6 +228,9 @@ def load(folder):
         for script in ("edugame-config.js", "edugame.js"):
             if script not in page:
                 problems.append('%s must load %s: <script src="%s"></script>' % (entry, script, script))
+    pages_cfg = data.get("pages", {})
+    if not isinstance(pages_cfg, dict) or not isinstance(pages_cfg.get("goatcounter", ""), str):
+        problems.append('pages must be {"goatcounter": "your-code"} (for the GitHub Pages site only).')
     for name in GENERATED:
         if os.path.exists(os.path.join(folder, name)):
             problems.append("Remove %s from the game folder: the build makes it." % name)
