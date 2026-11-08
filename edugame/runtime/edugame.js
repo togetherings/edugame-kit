@@ -182,9 +182,11 @@
   /** The files to look a word up in, best first: fr-CA, then fr, then the default language. */
   function chain(code) {
     var out = [];
+    // A build in en-GB alone still has en's words (and content) to fill the gaps: look in every language it has.
+    var have = LANGS.concat(Object.keys(config.strings || {}).filter(function (c) { return LANGS.indexOf(c) < 0; }));
     function add(c) {
-      for (var i = 0; i < LANGS.length; i++) {
-        if (LANGS[i].toLowerCase() === String(c).toLowerCase() && out.indexOf(LANGS[i]) < 0) out.push(LANGS[i]);
+      for (var i = 0; i < have.length; i++) {
+        if (have[i].toLowerCase() === String(c).toLowerCase() && out.indexOf(have[i]) < 0) out.push(have[i]);
       }
     }
     add(code);
@@ -710,7 +712,7 @@
   // -------------------------------------------------------- game options
   // A game can add its own choices to the Options panel:
   //   EduGame.addOption({key: "skin", label: "options.skin", default: "medium",
-  //                      choices: [{value: "light", label: "skin.light"}, ...],
+  //                      choices: [{value: "light", label: "skin.light", color: "#f3d2b9"}, ...],
   //                      keep: "device"})      // or "learner": in their save, so it follows them
   // EduGame.option("skin") reads it; "optionchange" tells the game it changed.
 
@@ -780,6 +782,7 @@
     ".eg-card legend{padding:0 .35rem;font-weight:700}",
     ".eg-card label{display:block;padding:.25rem 0;cursor:pointer}",
     ".eg-card small{opacity:.75}",
+    ".eg-swatch{display:inline-block;width:1.1em;height:1.1em;margin-right:.4em;vertical-align:-.2em;border-radius:50%;border:2px solid rgba(127,127,127,.6)}",
     ".eg-actions{display:flex;gap:.6rem;justify-content:flex-end;margin-top:.8rem;flex-wrap:wrap}",
     ".eg-actions button{font:inherit;cursor:pointer;padding:.45rem 1.1rem;border-radius:8px;",
     "border:2px solid var(--eg-accent);background:transparent;color:inherit}",
@@ -830,7 +833,13 @@
       var input = make("input", { type: "radio", name: name, value: String(item.value) });
       input.checked = String(item.value) === String(chosen);
       input.addEventListener("change", function () { if (input.checked) onPick(item.value); });
-      var kids = [input, document.createTextNode(" " + item.label)];
+      var kids = [input, document.createTextNode(" ")];
+      if (item.swatch) {   // a colour to show beside the name (a game option's choice can have one)
+        var dot = make("span", { className: "eg-swatch" });
+        dot.style.background = item.swatch;
+        kids.push(dot);
+      }
+      kids.push(document.createTextNode(item.label));
       if (item.hint) kids.push(document.createTextNode(" "), make("small", { text: item.hint }));
       return make("label", {}, kids);
     });
@@ -862,7 +871,7 @@
 
     var own = gameOptions.map(function (o) {
       return make("fieldset", {}, [make("legend", { text: t(o.label) })].concat(radios("eg-opt-" + o.key,
-        o.choices.map(function (c) { return { value: c.value, label: t(c.label) }; }), before.options[o.key],
+        o.choices.map(function (c) { return { value: c.value, label: t(c.label), swatch: c.color }; }), before.options[o.key],
         function (v) { setOption(o.key, v, false); picked["opt:" + o.key] = v; })));
     });
 

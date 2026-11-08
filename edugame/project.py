@@ -157,7 +157,10 @@ class Project(object):
         strings = {c: self.strings[c] for c in keep if c in self.strings}
         if not any(c in strings for c in data["languages"]):
             strings[data["languages"][0]] = self.strings[self.language]
-        return Project(self.folder, data, strings, pkg)
+        out = Project(self.folder, data, strings, pkg)
+        # Content in the languages left out (lessons/01/fr.json in an English build) stays out too.
+        out.dropped_languages = set(getattr(self, "dropped_languages", ())) | {c for c in self.languages if c not in keep}
+        return out
 
     @property
     def score_spec(self):
@@ -217,6 +220,8 @@ class Project(object):
                 if matches(rel, self.data.get("exclude", [])):
                     continue
                 if self.package and matches(rel, self.package.get("exclude", [])):
+                    continue
+                if self.is_content(rel) and rel.rsplit("/", 1)[-1][:-5] in getattr(self, "dropped_languages", ()):
                     continue
                 out.append(rel)
         return out
@@ -482,7 +487,8 @@ def used_keys(project):
             for m in pat.finditer(text):
                 keys = [pair.split(":")[-1].strip() for pair in m.group(1).split(",")] if i == 2 else [m.group(1)]
                 for k in keys:
-                    if re.match(r"^[A-Za-z0-9_.-]+$", k):   # not a placeholder like <key> in a comment
+                    # Not a placeholder like <key> in a comment, nor the start of a key made in code ("finger." + id)
+                    if re.match(r"^[A-Za-z0-9_.-]*[A-Za-z0-9]$", k):
                         found.setdefault(k, []).append(rel)
     return found
 

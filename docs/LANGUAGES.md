@@ -119,9 +119,10 @@ The button opens a panel over the game, with:
   ```js
   EduGame.addOption({
     key: "skin", label: "option.skin", "default": "medium",
-    choices: [{ value: "light", label: "skin.light" }, { value: "medium", label: "skin.medium" }],
+    choices: [{ value: "light", label: "skin.light", color: "#f3d2b9" }, { value: "medium", label: "skin.medium" }],
     keep: "learner"          // in the learner's save; "device" (the default): on this device
   });
+  // (a choice's color, if it has one, shows as a dot beside its name)
   EduGame.option("skin");                                   // the chosen value
   EduGame.on("optionchange", function (e) { /* e.key, e.value */ });
   ```

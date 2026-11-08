@@ -144,6 +144,8 @@ def test_packages_make_several_zips_from_one_folder(tmp_path):
     # One package, each language on its own.
     made = sorted(os.path.basename(x) for x in build.build_all(p, str(tmp_path / "each"), package="lesson-01", each_language=True))
     assert made == ["my-game-lesson-01-en-0.1.0.zip", "my-game-lesson-01-fr-0.1.0.zip"]
+    with zipfile.ZipFile(os.path.join(str(tmp_path / "each"), made[1])) as z:   # French only: no English lesson
+        assert "lessons/01/fr.json.js" in z.namelist() and "lessons/01/en.json.js" not in z.namelist()
     try:
         p.variant("lesson-09")
         assert False

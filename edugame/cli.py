@@ -228,6 +228,13 @@ def _preview_project(folder, package=None, languages=None):
     return p.variant(package, languages) if (package or languages) else p
 
 
+class _QuietServer(ThreadingHTTPServer):
+    """The preview server, without a traceback each time a browser closes a connection early."""
+    def handle_error(self, request, client_address):
+        if not isinstance(sys.exc_info()[1], (BrokenPipeError, ConnectionResetError)):
+            ThreadingHTTPServer.handle_error(self, request, client_address)
+
+
 def make_preview_server(folder, port, package=None, languages=None):
     folder = os.path.abspath(folder)
     built = tempfile.mkdtemp(prefix="edugame-preview-")
@@ -235,7 +242,7 @@ def make_preview_server(folder, port, package=None, languages=None):
     state = {"built": built, "sig": _signature(folder), "lock": threading.Lock(), "old": [],
              "package": package, "languages": languages}
     handler = type("Handler", (_PreviewHandler,), {"folder": folder, "state": state})
-    return ThreadingHTTPServer(("127.0.0.1", port), handler)
+    return _QuietServer(("127.0.0.1", port), handler)
 
 
 def cmd_preview(args):
