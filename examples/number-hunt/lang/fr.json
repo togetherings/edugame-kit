@@ -1,4 +1,8 @@
 {
+  "_language": {
+    "name": "Français",
+    "dir": "ltr"
+  },
   "title": "Chasse au nombre",
   "description": "Trouve le nombre secret en le moins d'essais possible.",
   "score_label": "Essais",

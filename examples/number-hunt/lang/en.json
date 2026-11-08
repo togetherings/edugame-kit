@@ -1,4 +1,8 @@
 {
+  "_language": {
+    "name": "English",
+    "dir": "ltr"
+  },
   "title": "Number Hunt",
   "description": "Find the secret number in as few guesses as you can.",
   "score_label": "Guesses",

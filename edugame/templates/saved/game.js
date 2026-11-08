@@ -8,8 +8,9 @@
   var question = null;
   var $ = function (id) { return document.getElementById(id); };
 
-  // Where saves go, in words the learner understands.
-  var WHERE = { "kolibri-games": "your account", scorm: "your account", sugarizer: "the Journal", local: "this browser" };
+  // Where saves go, in words the learner understands (lang/*.json: where_account ...).
+  var WHERE = { "kolibri-games": "where_account", scorm: "where_account", sugarizer: "where_journal", local: "where_browser" };
+  var platform = "local";
 
   function newQuestion() {
     var a = 1 + Math.floor(Math.random() * level * 4);
@@ -59,8 +60,16 @@
 
   EduGame.ready().then(function (info) {
     if (info.save && info.save.level) level = info.save.level;
-    $("where").textContent = t("saved_where", { where: WHERE[info.platform] || info.platform });
+    platform = info.platform;
+    showWhere();
     newQuestion();
     show();
   });
+
+  function showWhere() {
+    $("where").textContent = t("saved_where", { where: t(WHERE[platform] || "where_browser") });
+  }
+
+  // The learner chose another language in Options: redo the words made here.
+  EduGame.on("languagechange", function () { showWhere(); if (question) show(); });
 })();

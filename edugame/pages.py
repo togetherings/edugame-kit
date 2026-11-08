@@ -21,6 +21,7 @@ and "edugame:finish" on the page, and the script here counts them as events.
 import json
 import os
 import re
+import shutil
 from xml.sax.saxutils import escape, quoteattr
 
 from . import build
@@ -65,15 +66,27 @@ def _inject(html, snippet):
     return html[:at] + snippet + html[at:] if at >= 0 else snippet + html
 
 
-def front_page(project, repo=None, counter=""):
-    """The site's index.html."""
-    langs = project.languages
-    lang_links = ""
-    if len(langs) > 1:
-        lang_links = '<p class="langs">Play in: ' + " · ".join(
-            '<a href="play/?lang=%s" lang="%s">%s</a>' % (escape(code), escape(code), escape(project.text("title", code)))
-            for code in langs) + "</p>"
-    icon = '<img class="icon" src="play/%s" alt="">' % escape(project.icon) if project.icon else ""
+def _play_links(project, href):
+    """The Play button, and (with several languages) a link to play in each."""
+    out = '<a class="play" href="%s">Play</a>\n' % escape(href)
+    if len(project.languages) > 1:
+        out += '<p class="langs">Play in: ' + " · ".join(
+            '<a href="%s?lang=%s" lang="%s">%s</a>' % (escape(href), escape(code), escape(code), escape(project.text("title", code)))
+            for code in project.languages) + "</p>\n"
+    return out
+
+
+def front_page(project, repo=None, counter="", packages=None):
+    """The site's index.html. ``packages``: [(package's project, its folder)] for a game with packages."""
+    if packages:
+        lang_links = "".join(
+            '<section class="package">\n<h2>%s</h2>\n<p>%s</p>\n%s</section>\n' % (
+                escape(v.title), escape(v.description), _play_links(v, "play/%s/" % folder))
+            for v, folder in packages)
+    else:
+        lang_links = _play_links(project, "play/")
+    icon_dir = "play/%s/" % packages[0][1] if packages else "play/"
+    icon = '<img class="icon" src="%s%s" alt="">' % (icon_dir, escape(project.icon)) if project.icon else ""
     get = ""
     if repo:
         base = "https://github.com/%s" % repo
@@ -108,6 +121,9 @@ def front_page(project, repo=None, counter=""):
   .play:focus-visible { outline: 3px solid var(--text); outline-offset: 3px; }
   .note, .langs { color: var(--muted); font-size: .95rem; }
   a { color: inherit; }
+  .package { margin-top: 1.25rem; padding: .25rem 1.25rem 1rem; background: var(--panel); border-radius: 12px; }
+  .package h2 { font-size: 1.15rem; margin: .5rem 0 .25rem; }
+  .package p { margin: .25rem 0; }
   .get { margin-top: 2.5rem; padding: 1rem 1.25rem; background: var(--panel); border-radius: 12px; }
   .get h2 { font-size: 1.15rem; margin: .25rem 0; }
   footer { margin-top: 2rem; color: var(--muted); font-size: .85rem; }
@@ -117,7 +133,6 @@ def front_page(project, repo=None, counter=""):
 <main>
 <header>%(icon)s<h1>%(title)s</h1></header>
 <p class="desc">%(desc)s</p>
-<a class="play" href="play/">Play</a>
 %(langs)s
 <p class="note">%(kind)s Nothing is sent to a teacher from this page.</p>
 %(get)s
@@ -133,31 +148,45 @@ def front_page(project, repo=None, counter=""):
     }
 
 
-def build_pages(project, target, goatcounter=None, repo=None, events=True):
-    """Write the site into ``target`` (emptied first). Returns the GoatCounter code used, or None."""
-    code = goatcounter_code(project, goatcounter)
-    counter = tracker(code, events) if code else ""
-    play = os.path.join(target, "play")
-    build.build_folder(project, play)  # removes the old site's game first
-    for name in os.listdir(target):
-        if name != "play":
-            path = os.path.join(target, name)
-            if os.path.isfile(path):
-                os.remove(path)
-    # This copy is for the web only: the platform files would just confuse visitors.
+def _site_game(project, folder, counter):
+    """One playable copy of the game, for the web only."""
+    build.build_folder(project, folder)
+    # The platform files would just confuse visitors.
     for extra in ("imsmanifest.xml", "rachel-index.php", "kolibri-game.json"):
-        path = os.path.join(play, extra)
+        path = os.path.join(folder, extra)
         if os.path.exists(path):
             os.remove(path)
     if counter:
-        entry = os.path.join(play, *project.entry.split("/"))
+        entry = os.path.join(folder, *project.entry.split("/"))
         with open(entry, encoding="utf-8") as f:
             html = f.read()
         with open(entry, "w", encoding="utf-8") as f:
             f.write(_inject(html, counter))
+
+
+def build_pages(project, target, goatcounter=None, repo=None, events=True):
+    """Write the site into ``target`` (emptied first). Returns the GoatCounter code used, or None.
+
+    A game with packages gets each one at play/<package id>/, listed on the front page.
+    """
+    code = goatcounter_code(project, goatcounter)
+    counter = tracker(code, events) if code else ""
+    if os.path.isdir(target):
+        shutil.rmtree(target)
+    os.makedirs(target)
+    play = os.path.join(target, "play")
+    packages = []
+    if project.packages():
+        for pkg in project.packages():
+            v = project.variant(pkg["id"])
+            _site_game(v, os.path.join(play, pkg["id"]), counter)
+            packages.append((v, pkg["id"]))
+    else:
+        _site_game(project, play, counter)
     with open(os.path.join(target, "index.html"), "w", encoding="utf-8") as f:
-        f.write(front_page(project, repo, counter))
+        f.write(front_page(project, repo, counter, packages))
     open(os.path.join(target, ".nojekyll"), "w").close()
     with open(os.path.join(target, "site.json"), "w", encoding="utf-8") as f:
-        json.dump({"game": project.id, "version": project.version, "goatcounter": bool(code)}, f)
+        json.dump({"game": project.id, "version": project.version, "goatcounter": bool(code),
+                   "packages": [folder for _, folder in packages]}, f)
     return code

@@ -10,9 +10,7 @@
   --win: #f0b400;
   color-scheme: light;
 }
-@media (prefers-color-scheme: dark) {
-  :root { --bg: #0f171c; --card: #172229; --ink: #e3ecf0; --muted: #94a8b3; --sea: #7cc0e0; --sea-soft: #1d3542; color-scheme: dark; }
-}
+:root[data-theme=dark] { --bg: #0f171c; --card: #172229; --ink: #e3ecf0; --muted: #94a8b3; --sea: #7cc0e0; --sea-soft: #1d3542; color-scheme: dark; }
 * { box-sizing: border-box; }
 body { margin: 0; min-height: 100vh; background: var(--bg); color: var(--ink); font: 17px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
 [hidden] { display: none !important; }
@@ -24,7 +22,7 @@ h1 { font-size: 2.2rem; margin: 0 0 .6rem; letter-spacing: -.01em; }
 .note.warn { color: var(--hot); }
 button { font: inherit; border-radius: 10px; padding: .6rem 1.2rem; border: 2px solid var(--sea); background: var(--card); color: var(--ink); cursor: pointer; }
 button.go { background: var(--sea); color: #fff; font-weight: 700; }
-@media (prefers-color-scheme: dark) { button.go { color: #0b1a22; } }
+[data-theme=dark] button.go { color: #0b1a22; }
 button:disabled { opacity: .5; }
 :focus-visible { outline: 3px solid var(--win); outline-offset: 2px; }
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }

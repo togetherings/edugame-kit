@@ -1,4 +1,8 @@
 {
+  "_language": {
+    "name": "English",
+    "dir": "ltr"
+  },
   "title": "Memory Match",
   "description": "Turn over two cards at a time and find every matching pair.",
   "score_label": "Moves",
@@ -20,6 +24,19 @@
   "exit": "Back to games",
   "time_up": "Time's up",
   "time_up_text": "You found {found} of {pairs} pairs.",
-  "Circle": "circle", "Square": "square", "Triangle": "triangle", "Diamond": "diamond", "Star": "star",
-  "Heart": "heart", "Hexagon": "hexagon", "Cross": "cross", "Moon": "moon", "Drop": "drop", "Ring": "ring", "Bolt": "lightning bolt"
+  "Circle": "circle",
+  "Square": "square",
+  "Triangle": "triangle",
+  "Diamond": "diamond",
+  "Star": "star",
+  "Heart": "heart",
+  "Hexagon": "hexagon",
+  "Cross": "cross",
+  "Moon": "moon",
+  "Drop": "drop",
+  "Ring": "ring",
+  "Bolt": "lightning bolt",
+  "option_speed": "Wrong cards stay face up",
+  "speed_normal": "A moment",
+  "speed_slow": "Longer"
 }

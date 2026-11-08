@@ -1,4 +1,8 @@
 {
+  "_language": {
+    "name": "Français",
+    "dir": "ltr"
+  },
   "title": "Paires de cartes",
   "description": "Retourne deux cartes à la fois et trouve toutes les paires.",
   "score_label": "Coups",
@@ -20,6 +24,19 @@
   "exit": "Retour aux jeux",
   "time_up": "Temps écoulé",
   "time_up_text": "Tu as trouvé {found} paires sur {pairs}.",
-  "Circle": "cercle", "Square": "carré", "Triangle": "triangle", "Diamond": "losange", "Star": "étoile",
-  "Heart": "cœur", "Hexagon": "hexagone", "Cross": "croix", "Moon": "lune", "Drop": "goutte", "Ring": "anneau", "Bolt": "éclair"
+  "Circle": "cercle",
+  "Square": "carré",
+  "Triangle": "triangle",
+  "Diamond": "losange",
+  "Star": "étoile",
+  "Heart": "cœur",
+  "Hexagon": "hexagone",
+  "Cross": "croix",
+  "Moon": "lune",
+  "Drop": "goutte",
+  "Ring": "anneau",
+  "Bolt": "éclair",
+  "option_speed": "Les cartes fausses restent visibles",
+  "speed_normal": "Un instant",
+  "speed_slow": "Plus longtemps"
 }

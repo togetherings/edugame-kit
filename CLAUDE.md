@@ -16,6 +16,9 @@
   tests/test_project.py). BoBo Na Mi will be a Saved Game.
 - Only Saved and Scored Games are made with the kit. Server Games belong to the plugin.
 - Examples (`examples/`) and templates must stay fully translated (a test checks).
+- Words live in `lang/<code>.json` (with `_language` and `_notes`), content in the folders under
+  `content`, settings in edugame.json: docs/LANGUAGES.md. The helper owns the language choice, the
+  header and the Options panel; games don't add their own title or settings page.
 - Tests: `python -m pytest`; `python -m tests.e2e_browser` (Playwright; plays on the Kolibri Games
   games page too when kolibri-games is installed).
 - Bump `__version__` in `edugame/__init__.py` and add a CHANGELOG entry before a release. Releases

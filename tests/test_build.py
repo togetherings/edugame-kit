@@ -155,7 +155,7 @@ def test_preview_server_rebuilds_when_the_game_changes(tmp_path):
     base = "http://127.0.0.1:%d/" % server.server_address[1]
     try:
         assert b"edugame-test-scorm" in urllib.request.urlopen(base).read()  # redirected to the test page
-        assert b"<h1" in urllib.request.urlopen(base + "game/index.html").read()
+        assert b"edugame.js" in urllib.request.urlopen(base + "game/index.html").read()
         with open(os.path.join(folder, "lang", "en.json"), "w") as f:
             json.dump({"title": "Changed title"}, f)
         urllib.request.urlopen(base + "game/index.html").read()

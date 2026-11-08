@@ -1,4 +1,8 @@
 {
+  "_language": {
+    "name": "Français",
+    "dir": "ltr"
+  },
   "title": "Mon jeu",
   "description": "Réponds à dix additions le plus vite possible.",
   "score_label": "Bonnes réponses",

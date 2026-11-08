@@ -12,7 +12,8 @@ EduGame.ready().then(function (info) {
   // info.best       the first ranked score of "main" (games without levels), or null
   // info.bestSeconds, info.plays
   // info.settings   the settings (from Kolibri Games, or the defaults in edugame.json)
-  // info.language   the language chosen, like "fr"
+  // info.language   the language chosen, like "fr"; info.languages: [{code, name, dir}]
+  // info.theme      "light", "dark" or "auto"
   // info.platform   "kolibri-games", "scorm", "sugarizer" or "local"
   // info.canExit    true if the platform has a page to go back to (show a "back" button)
   // info.rules, info.challenge   Kolibri Games only: the coach's rules and challenge, or null
@@ -31,9 +32,30 @@ EduGame.finish(12).then(function (r) { // the round's score
 EduGame.finish({ acc: 97, wpm: 41 });           // several scores
 EduGame.finish({ acc: 72, wpm: 9 }, { passed: false });  // played, but not a result
 
-EduGame.t("found", { n: 3 });   // the translated text for "found", with {n} filled in
-EduGame.translatePage();        // fill in data-t elements again (ready() does it once)
+EduGame.abandon();              // the round ends without a result
 EduGame.exit();                 // go back, where info.canExit
+
+// Words and languages (see LANGUAGES.md)
+EduGame.t("found", { n: 3 });   // the word "found" in the current language, with {n} filled in
+EduGame.lines("help");          // a list of paragraphs
+EduGame.number(1234.5, 1);      // written the way the language writes numbers
+EduGame.translatePage();        // fill in data-t elements again (done for you when the language changes)
+EduGame.language();             // "fr"
+EduGame.setLanguage("sw");      // change it, and remember the learner's choice
+EduGame.on("languagechange", function (e) { /* make your own text again */ });
+
+// Options (see LANGUAGES.md): the panel the header's Options button opens
+EduGame.addOption({ key: "speed", label: "option_speed", choices: [{ value: "normal", label: "speed_normal" }] });
+EduGame.option("speed");
+EduGame.on("optionchange", function (e) {});   // e.key, e.value
+EduGame.theme(); EduGame.setTheme("dark");     // <html data-theme="light|dark">
+EduGame.openOptions();
+
+// Content (see LANGUAGES.md)
+EduGame.load("words/fr.json");                   // Promise of the data, or null
+EduGame.loadLanguage("maps/us/lang");            // the current language's words over the default's
+EduGame.loadLanguage("lessons/01", { merge: false });  // the nearest language's edition
+EduGame.config.package;                          // {id, title, config} in a package's build
 
 // Only do something on the Kolibri Games games page (safe to call anywhere):
 EduGame.move("guess", { value: 42 });   // coaches see every move
@@ -42,7 +64,7 @@ EduGame.on("timeup", function () {});   // the coach's time limit ran out
 ```
 
 In HTML, `data-t="key"` fills an element's text, and `data-t-attr="aria-label:key"` fills an
-attribute. See [TRANSLATING.md](TRANSLATING.md).
+attribute. See [LANGUAGES.md](LANGUAGES.md).
 
 ## Where it saves
 

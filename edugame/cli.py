@@ -71,24 +71,38 @@ def cmd_new(args):
 def cmd_check(args):
     p = _load(args.folder)
     print("%s %s: a %s Game in %s." % (p.title, p.version, p.type.capitalize(), ", ".join(p.languages)))
+    for pkg in p.packages():
+        v = p.variant(pkg["id"])
+        print("  package %s: %s (%d files, %s)" % (pkg["id"], v.title, len(v.files()), ", ".join(v.languages)))
     for code, keys in sorted(projects.missing_strings(p).items()):
         print("  lang/%s.json is missing %d words: %s" % (code, len(keys), ", ".join(keys[:8]) + (" ..." if len(keys) > 8 else "")))
+    for key, files in sorted(projects.unknown_keys(p).items()):
+        print("  %s uses the word '%s', which lang/%s.json doesn't have" % (", ".join(files[:3]), key, p.language))
     print("No problems found.")
+
+
+def _languages(args):
+    return [c.strip() for c in args.lang.split(",") if c.strip()] if getattr(args, "lang", None) else None
 
 
 def cmd_build(args):
     p = _load(args.folder)
-    made = [build.build_zip(p, args.out_dir)]
-    if args.sugarizer or args.all:
-        made.append(build.build_sugarizer(p, args.out_dir, args.sugar_lib))
-    if args.zim or args.all:
+    zim = args.zim or args.all
+    if zim:
         try:
-            made.append(build.build_zim(p, args.out_dir))
+            import libzim.writer  # noqa: F401
         except ImportError:
             msg = "Making a ZIM file needs libzim: pip install libzim"
             if args.zim:
                 sys.exit(msg)
             print(msg + " (skipped)", file=sys.stderr)
+            zim = False
+    try:
+        made = build.build_all(p, args.out_dir, package=args.package, languages=_languages(args),
+                               each_language=args.each_language, sugarizer=args.sugarizer or args.all,
+                               sugar_lib=args.sugar_lib, zim=zim)
+    except (projects.ProjectError, ValueError) as e:
+        sys.exit(str(e))
     for path in made:
         print("Made %s (%d KB)" % (path, (os.path.getsize(path) + 1023) // 1024))
 
@@ -112,9 +126,13 @@ def cmd_translate(args):
     if os.path.exists(path):
         with open(path, encoding="utf-8") as f:
             words = json.load(f)
-    added = [k for k in p.strings[p.language] if k not in words]
+    if "_language" not in words:
+        rtl = code.split("-")[0].lower() in ("ar", "fa", "he", "ps", "ur", "yi", "dv", "ckb")
+        words["_language"] = {"name": code, "dir": "rtl" if rtl else "ltr"}  # write the name in the language itself
+    # The default language's words, to be translated (its notes for translators stay in its own file).
+    added = [k for k in p.strings[p.language] if k not in words and k != "_notes"]
     for k in added:
-        words[k] = p.strings[p.language][k]  # to be translated
+        words[k] = p.strings[p.language][k]
     with open(path, "w", encoding="utf-8") as f:
         json.dump(words, f, indent=2, ensure_ascii=False)
         f.write("\n")
@@ -123,7 +141,11 @@ def cmd_translate(args):
         with open(os.path.join(p.folder, "edugame.json"), "w", encoding="utf-8") as f:
             json.dump(p.data, f, indent=2, ensure_ascii=False)
             f.write("\n")
-    print("lang/%s.json has %d words to translate (copied from %s)." % (code, len(added), p.language))
+    print("lang/%s.json has %d words to translate (copied from %s). Put the language's own name in _language."
+          % (code, len(added), p.language))
+    if p.content_dirs:
+        print("Content folders (%s) may need lang/%s.json files or editions too: see docs/LANGUAGES.md."
+              % (", ".join(p.content_dirs), code))
 
 
 def _signature(folder):
@@ -157,7 +179,7 @@ class _PreviewHandler(SimpleHTTPRequestHandler):
             if sig == self.state["sig"]:
                 return
             target = tempfile.mkdtemp(prefix="edugame-preview-")
-            build.build_folder(projects.load(self.folder), target)
+            build.build_folder(_preview_project(self.folder, self.state["package"], self.state["languages"]), target)
             self.state["old"].append(self.state["built"])
             self.state["built"], self.state["sig"] = target, sig
             while len(self.state["old"]) > 2:
@@ -174,7 +196,7 @@ class _PreviewHandler(SimpleHTTPRequestHandler):
 
     def do_GET(self):
         if self.path in ("/", ""):
-            p = projects.load(self.folder)
+            p = _preview_project(self.folder, self.state["package"], self.state["languages"])
             self.send_response(302)
             self.send_header("Location", "/test/?game=/game/%s&id=%s&languages=%s" % (p.entry, p.id, ",".join(p.languages)))
             self.end_headers()
@@ -199,18 +221,29 @@ class _PreviewHandler(SimpleHTTPRequestHandler):
         pass
 
 
-def make_preview_server(folder, port):
+def _preview_project(folder, package=None, languages=None):
+    p = projects.load(folder)
+    if package is None and p.packages():
+        package = p.packages()[0]["id"]
+    return p.variant(package, languages) if (package or languages) else p
+
+
+def make_preview_server(folder, port, package=None, languages=None):
     folder = os.path.abspath(folder)
     built = tempfile.mkdtemp(prefix="edugame-preview-")
-    build.build_folder(projects.load(folder), built)
-    state = {"built": built, "sig": _signature(folder), "lock": threading.Lock(), "old": []}
+    build.build_folder(_preview_project(folder, package, languages), built)
+    state = {"built": built, "sig": _signature(folder), "lock": threading.Lock(), "old": [],
+             "package": package, "languages": languages}
     handler = type("Handler", (_PreviewHandler,), {"folder": folder, "state": state})
     return ThreadingHTTPServer(("127.0.0.1", port), handler)
 
 
 def cmd_preview(args):
     _load(args.folder)
-    server = make_preview_server(args.folder, args.port)
+    try:
+        server = make_preview_server(args.folder, args.port, args.package, _languages(args))
+    except projects.ProjectError as e:
+        sys.exit(str(e))
     url = "http://127.0.0.1:%d/" % server.server_address[1]
     print("Test page: %s  (press Ctrl+C to stop; reload the page after you change the game)" % url)
     if not args.no_browser:
@@ -245,12 +278,17 @@ def main(argv=None):
     p.add_argument("--sugar-lib", help="the lib folder of a Sugarizer activity, to save in the Journal")
     p.add_argument("--zim", action="store_true", help="also make a ZIM file for Kiwix (needs libzim)")
     p.add_argument("--all", action="store_true", help="make everything this computer can")
+    p.add_argument("--package", help="only this package (see packages in edugame.json)")
+    p.add_argument("--lang", help="only these languages, like fr or fr,en (the first is the default)")
+    p.add_argument("--each-language", action="store_true", help="one zip per language, instead of one with every language")
     p.set_defaults(func=cmd_build)
 
     p = sub.add_parser("preview", help="try the game in the test page")
     p.add_argument("folder")
     p.add_argument("--port", type=int, default=8100)
     p.add_argument("--no-browser", action="store_true")
+    p.add_argument("--package", help="the package to try (the first, if the game has packages)")
+    p.add_argument("--lang", help="only these languages, like fr or fr,en")
     p.set_defaults(func=cmd_preview)
 
     p = sub.add_parser("pages", help="make a GitHub Pages site: a front page and the game")
