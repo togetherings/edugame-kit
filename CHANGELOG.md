@@ -13,9 +13,11 @@
   direction) and `_notes` for translators. A regional file (`en-GB`) only needs the words that
   differ. New calls: `lines`, `number`, `language`, `languages`, `setLanguage`, `on("languagechange")`.
 - **Content:** folders listed under `content` are built into small scripts the game loads when it
-  needs them (`EduGame.load`, `EduGame.loadLanguage`), as translations or as editions.
+  needs them (`EduGame.load`, `EduGame.loadLanguage`), as translations or as editions. The build
+  lists the files it put in, so the helper never asks for one that isn't there.
 - **Packages:** several zips from one folder (`packages`, `package_files`), with `edugame build
   --package`, `--lang` and `--each-language`. The GitHub Pages site lists every package.
+- `exclude` in `edugame.json` leaves files out of the game (tools, notes).
 - `edugame check` lists words the code uses that the lang files don't have.
 - The templates and examples use the header, the theme and translated words throughout. Memory
   Match has an option of its own.

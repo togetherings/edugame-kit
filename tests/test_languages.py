@@ -173,6 +173,15 @@ def test_a_site_lists_every_package(tmp_path):
     assert not os.path.exists(os.path.join(site, "play", "lesson-02", "lessons", "01"))
 
 
+def test_files_can_be_left_out(tmp_path):
+    folder = copy_game("saved", tmp_path)
+    write(folder, "tools/make.py", "print(1)")
+    write(folder, "README.md", "# Notes")
+    edit(folder, lambda d: d.update(exclude=["tools/*", "*.md"]))
+    files = projects.load(folder).files()
+    assert "game.js" in files and not [f for f in files if f.startswith("tools/") or f.endswith(".md")]
+
+
 def test_options_settings_are_checked(tmp_path):
     folder = copy_game("scored", tmp_path)
     edit(folder, lambda d: d.update(options={"theme": "dark", "header": False}))

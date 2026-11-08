@@ -79,6 +79,7 @@ Don't add `edugame.js`, `edugame-config.js`, `kolibri-game.json`, `imsmanifest.x
 | `scoring` | Scored Games | What the scores are and how they compare: see [SCORING.md](SCORING.md). |
 | `settings` | no | Options coaches can change on the Kolibri Games games page (the format is in Kolibri Games' [GAME_FORMAT.md](https://github.com/togetherings/kolibri-games/blob/main/docs/GAME_FORMAT.md)). Everywhere else, the game gets the `default` values. |
 | `options` | no | The Options button: `{"theme": "auto", "header": true}`. See [LANGUAGES.md](LANGUAGES.md). |
+| `exclude` | no | Files in the folder that aren't part of the game, like `["tools/*", "docs/*", "*.md"]`. |
 | `content` | no | Folders of content JSON, loaded when needed: `["lessons", "maps"]`. |
 | `packages`, `package_files` | no | Several zips from one folder, each with part of the content. |
 | `authors`, `license` | no | Shown by platforms that list them. |

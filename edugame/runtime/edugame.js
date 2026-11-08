@@ -937,6 +937,8 @@
 
   function load(path) {
     if (contentCache.hasOwnProperty(path)) return Promise.resolve(contentCache[path]);
+    // The build lists the content files it put in; anything else isn't there (no need to ask, and see an error).
+    if (Array.isArray(config.content) && config.content.indexOf(path) < 0) return Promise.resolve(null);
     return new Promise(function (resolve) {
       if (contentWaiting[path]) { contentWaiting[path].push(resolve); return; }
       contentWaiting[path] = [resolve];

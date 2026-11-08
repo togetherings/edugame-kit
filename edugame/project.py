@@ -29,6 +29,7 @@ edugame.json::
       "settings": [...],                 options coaches can change in Kolibri Games
       "options": {"theme": "auto", "header": true},   the Options button and panel (see edugame.js)
       "content": ["words", "maps"],      folders of content JSON, loaded when needed
+      "exclude": ["tools/*", "docs/*"],  files in the folder that aren't part of the game
       "packages": [...], "package_files": [...],      several zips from one folder (see packages())
       "authors": ["..."], "license": "MIT"
     }
@@ -213,6 +214,8 @@ class Project(object):
                 only = self.data.get("package_files", [])
                 if only and matches(rel, only) and not (self.package and matches(rel, self.package.get("files", []))):
                     continue
+                if matches(rel, self.data.get("exclude", [])):
+                    continue
                 if self.package and matches(rel, self.package.get("exclude", [])):
                     continue
                 out.append(rel)
@@ -228,6 +231,8 @@ class Project(object):
             "strings": self.strings,
             "color": self.color,
             "options": self.data.get("options", {}),
+            # The content files in this build, so the helper only asks for files that are there.
+            "content": [rel for rel in self.files() if self.is_content(rel)],
         }
         if self.package:
             cfg["package"] = {"id": self.package["id"], "title": self.package.get("title") or "title",
@@ -412,6 +417,9 @@ def _check_more(data, folder, problems, languages):
         for d in content:
             if not os.path.isdir(os.path.join(folder, d)):
                 problems.append("content: the folder %s isn't in the game." % d)
+    exclude = data.get("exclude", [])
+    if not isinstance(exclude, list) or not all(isinstance(x, str) for x in exclude):
+        problems.append('exclude must list file patterns to leave out of the game, like ["tools/*", "docs/*"].')
     only = data.get("package_files", [])
     if not isinstance(only, list) or not all(isinstance(x, str) for x in only):
         problems.append('package_files must list file patterns, like ["maps/*"].')
@@ -474,7 +482,8 @@ def used_keys(project):
             for m in pat.finditer(text):
                 keys = [pair.split(":")[-1].strip() for pair in m.group(1).split(",")] if i == 2 else [m.group(1)]
                 for k in keys:
-                    found.setdefault(k, []).append(rel)
+                    if re.match(r"^[A-Za-z0-9_.-]+$", k):   # not a placeholder like <key> in a comment
+                        found.setdefault(k, []).append(rel)
     return found
 
 
