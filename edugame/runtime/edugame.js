@@ -25,9 +25,37 @@
  *                               a value for each field: finish({acc: 97, wpm: 41}). With passed: false
  *                               the round is played but not kept as a result.
  *                               -> Promise of {score, values, seconds, kept, best, newBest, platform}
- *   EduGame.t(key, vars)        a translated string: t("found", {n: 3}) for "Found {n}!"
- *   EduGame.translatePage()     fill in every element with data-t="key" (done by ready())
+ *   EduGame.abandon()           the round ends without a result
  *   EduGame.exit()              leave the game, where the platform has a way back (ready() says canExit)
+ *
+ * Words and languages (docs/LANGUAGES.md). The words are in lang/<code>.json; the
+ * helper picks the language: the learner's own choice (kept in their save), then
+ * ?lang=, the platform's language, the browser's, and the game's default.
+ *
+ *   EduGame.t(key, vars)        a word in the current language: t("found", {n: 3}) for "Found {n}!".
+ *                               A plural set {"one": ..., "other": ...} chooses by {n}.
+ *   EduGame.lines(key)          a list of paragraphs, as an array
+ *   EduGame.number(n, decimals) a number written the way the language writes it
+ *   EduGame.translatePage()     fill in every element with data-t="key" (done by ready())
+ *   EduGame.language()          the current language code; EduGame.languages(): [{code, name, dir}]
+ *   EduGame.setLanguage(code)   change it (and remember the learner's choice)
+ *
+ * Options. The helper puts a header at the top of the page, with the title and an
+ * Options button (only the button on the Kolibri Games games page). The panel has
+ * Appearance (light, dark or auto: <html data-theme>), Language and the game's own options.
+ *
+ *   EduGame.addOption({key, label, choices: [{value, label}], default, keep: "device"|"learner"})
+ *   EduGame.option(key)         the chosen value
+ *   EduGame.openOptions()       open the panel (any element with data-edugame-options does too)
+ *   EduGame.theme(), EduGame.setTheme("dark")
+ *   EduGame.on("languagechange" | "themechange" | "optionchange", fn)
+ *
+ * Content (maps, lessons, word lists: the folders under "content" in edugame.json).
+ *
+ *   EduGame.load("words/fr.json")          -> Promise of the data, or null
+ *   EduGame.loadLanguage("maps/us/lang")   -> Promise of the current language's file, over the default's
+ *   EduGame.loadLanguage(dir, {merge: false}) the nearest language's file only (an edition)
+ *   EduGame.config.package      the package this build is ({id, title, config}), or undefined
  *
  * Extras that only do something on the Kolibri Games games page (elsewhere
  * they do nothing, so a game can always call them):
@@ -38,7 +66,7 @@
  *   ready() also gives `rules` ({counts, time_limit, ...}) and `challenge`, or null
  *
  * WHAT IS SAVED. In SCORM cmi.suspend_data and in this browser, one JSON object:
- *   {"_v": 1, "_save": <the game's save>, "main": [7, 41.5, 3]}
+ *   {"_v": 1, "_save": <the game's save>, "_lang": "fr", "_options": {...}, "main": [7, 41.5, 3]}
  * Keys starting with "_" belong to the helper and the game. Every other key is a
  * board (a level, or "main" for a game without levels) holding the learner's
  * kept result as a list: one value for each of scoring.fields, in that order.
@@ -75,46 +103,159 @@
   var record = { _v: VERSION };   // what's saved (see above)
   var backend = null;              // one of the backends below
   var info = null;                 // what ready() resolves with
-  var strings = {};                // translations for the chosen language
   var roundStart = null;           // Date.now() when start() was called
   var readyPromise = null;
 
   function now() { return Date.now(); }
 
+  // ----------------------------------------------------------- languages
+  // Every word a game shows is in lang/<code>.json, one file per language
+  // (edugame build puts them all in edugame-config.js as config.strings).
+  // A value is text, a list of paragraphs, or a plural set like
+  //   {"one": "{n} guess", "other": "{n} guesses"}
+  // Keys starting with "_" aren't words: "_language" ({name, dir}) and
+  // "_notes" (help for translators). A regional file (en-GB.json) only needs
+  // the words that differ: the rest comes from en.json, then the default.
+
+  var LANGS = config.languages || ["en"];  // the game's languages; the first is the default
+  var DEFAULT = LANGS[0];
+  var current = DEFAULT;                    // the language in use
+  var LANG_KEY = "edugame:" + config.id + ":language";
+
+  // The kit's own words (the Options button and panel). A game's lang/ files can
+  // replace any of them by using the same key.
+  var KIT_WORDS = {
+    en: { "kit.options": "Options", "kit.options_title": "Options", "kit.appearance": "Appearance",
+          "kit.theme_light": "Light", "kit.theme_dark": "Dark", "kit.theme_auto": "Auto",
+          "kit.theme_auto_hint": "(follows this device's light or dark setting)", "kit.language": "Language",
+          "kit.apply": "Apply", "kit.back": "Back" },
+    fr: { "kit.options": "Options", "kit.options_title": "Options", "kit.appearance": "Apparence",
+          "kit.theme_light": "Clair", "kit.theme_dark": "Sombre", "kit.theme_auto": "Auto",
+          "kit.theme_auto_hint": "(suit le réglage clair ou sombre de cet appareil)", "kit.language": "Langue",
+          "kit.apply": "Appliquer", "kit.back": "Retour" },
+    es: { "kit.options": "Opciones", "kit.options_title": "Opciones", "kit.appearance": "Apariencia",
+          "kit.theme_light": "Claro", "kit.theme_dark": "Oscuro", "kit.theme_auto": "Automático",
+          "kit.theme_auto_hint": "(sigue el ajuste claro u oscuro de este dispositivo)", "kit.language": "Idioma",
+          "kit.apply": "Aplicar", "kit.back": "Volver" },
+    pt: { "kit.options": "Opções", "kit.options_title": "Opções", "kit.appearance": "Aparência",
+          "kit.theme_light": "Claro", "kit.theme_dark": "Escuro", "kit.theme_auto": "Automático",
+          "kit.theme_auto_hint": "(segue a configuração clara ou escura deste dispositivo)", "kit.language": "Idioma",
+          "kit.apply": "Aplicar", "kit.back": "Voltar" },
+    sw: { "kit.options": "Chaguo", "kit.options_title": "Chaguo", "kit.appearance": "Mwonekano",
+          "kit.theme_light": "Mwanga", "kit.theme_dark": "Giza", "kit.theme_auto": "Otomatiki",
+          "kit.theme_auto_hint": "(hufuata mpangilio wa mwanga au giza wa kifaa hiki)", "kit.language": "Lugha",
+          "kit.apply": "Tumia", "kit.back": "Rudi" }
+  };
+
   function cleanLanguage(code) {
-    return String(code || "").replace("_", "-").trim();
+    return String(code || "").replace(/_/g, "-").trim();
   }
 
-  /** The best match for `wanted` among the game's languages, or null. */
+  function base(code) { return code.split("-")[0].toLowerCase(); }
+
+  /** The best match for `wanted` among the game's languages, or null: exact, then the same base language. */
   function matchLanguage(wanted) {
     wanted = cleanLanguage(wanted).toLowerCase();
     if (!wanted) return null;
-    var langs = config.languages || [];
-    for (var i = 0; i < langs.length; i++) if (langs[i].toLowerCase() === wanted) return langs[i];
-    var base = wanted.split("-")[0];
-    for (var j = 0; j < langs.length; j++) if (langs[j].toLowerCase().split("-")[0] === base) return langs[j];
+    for (var i = 0; i < LANGS.length; i++) if (LANGS[i].toLowerCase() === wanted) return LANGS[i];
+    for (var j = 0; j < LANGS.length; j++) if (LANGS[j].toLowerCase() === base(wanted)) return LANGS[j];
+    for (var k = 0; k < LANGS.length; k++) if (base(LANGS[k]) === base(wanted)) return LANGS[k];
     return null;
   }
 
-  /** ?lang= in the address, then the platform's language, then the browser's, then the game's first. */
+  function storedLanguage() {
+    try { return window.localStorage.getItem(LANG_KEY); } catch (e) { return null; }
+  }
+
+  /** The learner's own choice first, then ?lang=, the platform's language, the browser's, the game's default. */
   function chooseLanguage(platformLanguage) {
     var m = /[?&]lang=([A-Za-z0-9_-]+)/.exec(location.search);
-    var tries = [m && m[1], platformLanguage].concat(navigator.languages || [navigator.language]);
+    var tries = [record._lang, storedLanguage(), m && m[1], platformLanguage]
+      .concat(navigator.languages || [navigator.language]);
     for (var i = 0; i < tries.length; i++) {
       var found = matchLanguage(tries[i]);
       if (found) return found;
     }
-    return (config.languages || ["en"])[0];
+    return DEFAULT;
   }
 
-  function t(key, vars) {
-    var text = strings[key];
-    if (text === undefined) text = (config.strings[(config.languages || ["en"])[0]] || {})[key];
-    if (text === undefined) return key;
+  /** The files to look a word up in, best first: fr-CA, then fr, then the default language. */
+  function chain(code) {
+    var out = [];
+    // A build in en-GB alone still has en's words (and content) to fill the gaps: look in every language it has.
+    var have = LANGS.concat(Object.keys(config.strings || {}).filter(function (c) { return LANGS.indexOf(c) < 0; }));
+    function add(c) {
+      for (var i = 0; i < have.length; i++) {
+        if (have[i].toLowerCase() === String(c).toLowerCase() && out.indexOf(have[i]) < 0) out.push(have[i]);
+      }
+    }
+    add(code);
+    add(base(code));
+    add(DEFAULT);
+    return out;
+  }
+
+  function lookup(key) {
+    var langs = chain(current);
+    for (var i = 0; i < langs.length; i++) {
+      var words = config.strings[langs[i]] || {};
+      if (words[key] !== undefined) return words[key];
+    }
+    var kit = KIT_WORDS[current] || KIT_WORDS[base(current)] || KIT_WORDS.en;
+    return kit[key] !== undefined ? kit[key] : KIT_WORDS.en[key];
+  }
+
+  /** "one", "few", "other"...: the plural form of n in the current language. */
+  function pluralForm(n) {
+    try {
+      if (window.Intl && Intl.PluralRules) return new Intl.PluralRules(current).select(n);
+    } catch (e) { /* an old browser or an unknown language */ }
+    return n === 1 ? "one" : "other";
+  }
+
+  function fill(text, vars) {
     return String(text).replace(/\{(\w+)\}/g, function (all, name) {
       return vars && vars[name] !== undefined ? vars[name] : all;
     });
   }
+
+  /** A word in the current language, with {names} filled in: t("found", {n: 3}).
+   *  Plural sets choose by {n} (or {count}). A missing word shows its key. */
+  function t(key, vars) {
+    var v = lookup(key);
+    if (v === undefined) return key;
+    if (Array.isArray(v)) return v.map(function (line) { return fill(line, vars); }).join("\n\n");
+    if (v && typeof v === "object") {
+      var n = vars && (vars.n !== undefined ? vars.n : vars.count);
+      v = v[pluralForm(Number(n))] || v.other || "";
+    }
+    return fill(v, vars);
+  }
+
+  /** A list of paragraphs (a value that's a list), as an array of text. */
+  function lines(key, vars) {
+    var v = lookup(key);
+    if (v === undefined) return [];
+    if (!Array.isArray(v)) return [t(key, vars)];
+    return v.map(function (line) { return fill(line, vars); });
+  }
+
+  /** A number written the way the current language writes it: 1,234.5 or 1 234,5. */
+  function number(n, decimals) {
+    try {
+      return new Intl.NumberFormat(current, { minimumFractionDigits: decimals || 0, maximumFractionDigits: decimals || 0 }).format(n);
+    } catch (e) {
+      return decimals ? Number(n).toFixed(decimals) : String(Math.round(n));
+    }
+  }
+
+  function about(code) {
+    var meta = (config.strings[code] || {})._language || {};
+    return { code: code, name: meta.name || code, dir: meta.dir || (RTL.indexOf(base(code)) >= 0 ? "rtl" : "ltr") };
+  }
+
+  /** The game's languages, each with its name in its own language: [{code, name, dir}]. */
+  function languages() { return LANGS.map(about); }
 
   function translatePage(root) {
     root = root || document;
@@ -130,12 +271,31 @@
     }
   }
 
-  function setLanguage(code) {
-    strings = config.strings[code] || {};
+  function titleKey() { return (config.package && config.package.title) || "title"; }
+
+  /** Show the page in a language (its words, direction and title). */
+  function applyLanguage(code) {
+    current = code;
     var html = document.documentElement;
     html.lang = code;
-    html.dir = RTL.indexOf(code.split("-")[0]) >= 0 ? "rtl" : "ltr";
-    if (strings.title) document.title = strings.title;
+    html.dir = about(code).dir;
+    var title = t(titleKey());
+    if (title && title !== titleKey()) document.title = title;
+    translatePage();
+  }
+
+  /** Change the language, and remember the learner's choice (in their save, so it can follow them). */
+  function setLanguage(code) {
+    var found = matchLanguage(code);
+    if (!found) return Promise.reject(new Error("This game isn't in " + code + "."));
+    applyLanguage(found);
+    try { window.localStorage.setItem(LANG_KEY, found); } catch (e) { /* storage blocked */ }
+    emit("languagechange", { language: found });
+    return ready().then(function () {
+      info.language = found;
+      record._lang = found;
+      return backend.write(record);
+    });
   }
 
   function defaultSettings() {
@@ -394,12 +554,13 @@
         });
       },
       write: function (rec) {
-        // Only the game's own save goes to the plugin: it keeps the scores.
-        return KG.setState({ _v: VERSION, _save: rec._save });
+        // The plugin keeps the scores itself; it gets the game's save and the learner's choices.
+        return KG.setState({ _v: VERSION, _save: rec._save, _lang: rec._lang, _options: rec._options });
       },
-      start: function (board) {
-        return KG.start({ resume: false, board: board === MAIN ? "" : board });
+      start: function (board, resume) {
+        return KG.start({ resume: !!resume, board: board === MAIN ? "" : board });
       },
+      abandon: function () { return KG.abandon(); },
       finish: function (round, kept, passed) {
         var values = {};
         fields.forEach(function (f) { if (f.source === "game") values[f.key] = round[f.key]; });
@@ -497,6 +658,328 @@
     });
   }
 
+  // -------------------------------------------------------------- events
+  // EduGame.on(name, fn): "languagechange", "themechange", "optionchange" from
+  // the helper; anything else (like "timeup") comes from the platform.
+
+  var handlers = {};
+  var OWN_EVENTS = ["languagechange", "themechange", "optionchange"];
+
+  function emit(name, detail) {
+    (handlers[name] || []).forEach(function (fn) { try { fn(detail); } catch (e) { console.error(e); } });
+    announce(name, detail);
+  }
+
+  // --------------------------------------------------------------- theme
+  // Light, dark or auto (follow the device). Kept on this device, not with the
+  // learner: someone may want dark on their phone and light on a classroom screen.
+  // The page gets data-theme="light" or "dark" on <html>; style both with CSS variables.
+
+  var OPTIONS = config.options || {};
+  var THEME_KEY = "edugame:" + config.id + ":theme";
+  var THEMES = ["light", "dark", "auto"];
+  var darkQuery = null;
+  try { darkQuery = window.matchMedia("(prefers-color-scheme: dark)"); } catch (e) { /* old browser */ }
+
+  function theme() {
+    var saved = null;
+    try { saved = window.localStorage.getItem(THEME_KEY); } catch (e) { /* storage blocked */ }
+    if (THEMES.indexOf(saved) >= 0) return saved;
+    return THEMES.indexOf(OPTIONS.theme) >= 0 ? OPTIONS.theme : "auto";
+  }
+
+  function applyTheme(choice) {
+    var dark = choice === "dark" || (choice === "auto" && darkQuery && darkQuery.matches);
+    document.documentElement.setAttribute("data-theme", dark ? "dark" : "light");
+  }
+
+  function setTheme(choice, remember) {
+    if (THEMES.indexOf(choice) < 0) return;
+    applyTheme(choice);
+    if (remember !== false) {
+      try { window.localStorage.setItem(THEME_KEY, choice); } catch (e) { /* storage blocked */ }
+    }
+    emit("themechange", { theme: choice });
+  }
+
+  applyTheme(theme());   // as early as possible, so the page doesn't flash the wrong theme
+  if (darkQuery) {
+    var follow = function () { if (theme() === "auto") applyTheme("auto"); };
+    if (darkQuery.addEventListener) darkQuery.addEventListener("change", follow);
+    else if (darkQuery.addListener) darkQuery.addListener(follow);
+  }
+
+  // -------------------------------------------------------- game options
+  // A game can add its own choices to the Options panel:
+  //   EduGame.addOption({key: "skin", label: "options.skin", default: "medium",
+  //                      choices: [{value: "light", label: "skin.light", color: "#f3d2b9"}, ...],
+  //                      keep: "device"})      // or "learner": in their save, so it follows them
+  // EduGame.option("skin") reads it; "optionchange" tells the game it changed.
+
+  var gameOptions = [];
+
+  function optionKey(o) { return "edugame:" + config.id + ":option:" + o.key; }
+
+  function option(key) {
+    var o = gameOptions.filter(function (x) { return x.key === key; })[0];
+    if (!o) return undefined;
+    var v;
+    if (o.keep === "learner") v = (record._options || {})[key];
+    else { try { v = window.localStorage.getItem(optionKey(o)); } catch (e) { /* storage blocked */ } }
+    var ok = o.choices.some(function (c) { return String(c.value) === String(v); });
+    return ok ? o.choices.filter(function (c) { return String(c.value) === String(v); })[0].value : o["default"];
+  }
+
+  function setOption(key, value, remember) {
+    var o = gameOptions.filter(function (x) { return x.key === key; })[0];
+    if (!o) return;
+    if (remember !== false) {
+      if (o.keep === "learner") {
+        record._options = record._options || {};
+        record._options[key] = value;
+        if (backend) backend.write(record);
+      } else {
+        try { window.localStorage.setItem(optionKey(o), String(value)); } catch (e) { /* storage blocked */ }
+      }
+    }
+    emit("optionchange", { key: key, value: value });
+  }
+
+  function addOption(o) {
+    if (!o || !o.key || !Array.isArray(o.choices) || !o.choices.length) throw new Error("addOption() needs a key and choices.");
+    gameOptions = gameOptions.filter(function (x) { return x.key !== o.key; }).concat([{
+      key: o.key, label: o.label || o.key, choices: o.choices, keep: o.keep === "learner" ? "learner" : "device",
+      "default": o["default"] !== undefined ? o["default"] : o.choices[0].value
+    }]);
+  }
+
+  // ------------------------------------------------ the Options button and panel
+  // By default the kit puts a header at the top of the page: the game's title, and
+  // an Options button beside it. "options": {"header": false} in edugame.json leaves
+  // it out; then any element with data-edugame-options opens the panel, and so does
+  // EduGame.openOptions(). On the Kolibri Games games page, which shows the title
+  // already, the header has only the button.
+  // The panel lays over the page: Appearance, Language, and the game's own options.
+  // Appearance and the game's options change as they're clicked; the language changes
+  // on Apply. Back (or Escape) puts back what was there before.
+
+  var STYLE = [
+    ".eg-header{display:flex;align-items:center;justify-content:space-between;gap:.5rem 1rem;flex-wrap:wrap;",
+    "padding:.5rem 1rem;border-bottom:1px solid var(--eg-line,rgba(127,127,127,.3))}",
+    ".eg-header .eg-title{margin:0;font-size:1.25rem;line-height:1.3;font-weight:700}",
+    ".eg-header.eg-no-title{justify-content:flex-end;border-bottom:0;padding-bottom:0}",
+    ".eg-header.eg-no-title .eg-title{display:none}",
+    ".eg-options-button{font:inherit;cursor:pointer;padding:.35rem .9rem;border-radius:8px;",
+    "border:2px solid var(--eg-accent);background:transparent;color:inherit}",
+    ".eg-options-button:focus-visible,.eg-card button:focus-visible,.eg-card input:focus-visible{outline:3px solid var(--eg-accent);outline-offset:2px}",
+    ".eg-overlay{position:fixed;inset:0;z-index:2147483000;display:flex;align-items:flex-start;justify-content:center;",
+    "padding:5vh 16px;background:rgba(0,0,0,.45);overflow:auto}",
+    ".eg-card{width:100%;max-width:28rem;padding:1rem 1.25rem;border-radius:12px;background:var(--eg-panel,#fff);",
+    "color:var(--eg-text,#1d232b);box-shadow:0 10px 40px rgba(0,0,0,.35);font:16px/1.45 system-ui,sans-serif}",
+    "[data-theme=dark] .eg-card{background:var(--eg-panel-dark,#20252c);color:var(--eg-text-dark,#e9edf1)}",
+    ".eg-card h2{margin:.2rem 0 .6rem;font-size:1.3rem}",
+    ".eg-card fieldset{border:2px solid rgba(127,127,127,.35);border-radius:8px;margin:.6rem 0;padding:.4rem .9rem .7rem}",
+    ".eg-card legend{padding:0 .35rem;font-weight:700}",
+    ".eg-card label{display:block;padding:.25rem 0;cursor:pointer}",
+    ".eg-card small{opacity:.75}",
+    ".eg-swatch{display:inline-block;width:1.1em;height:1.1em;margin-right:.4em;vertical-align:-.2em;border-radius:50%;border:2px solid rgba(127,127,127,.6)}",
+    ".eg-actions{display:flex;gap:.6rem;justify-content:flex-end;margin-top:.8rem;flex-wrap:wrap}",
+    ".eg-actions button{font:inherit;cursor:pointer;padding:.45rem 1.1rem;border-radius:8px;",
+    "border:2px solid var(--eg-accent);background:transparent;color:inherit}",
+    ".eg-actions .eg-primary{background:var(--eg-accent);color:#fff}"
+  ].join("");
+
+  function addStyle() {
+    if (document.getElementById("edugame-style")) return;
+    var st = document.createElement("style");
+    st.id = "edugame-style";
+    st.textContent = ":root{--eg-accent:" + (config.color || "#3b6e8f") + "}" + STYLE;
+    (document.head || document.documentElement).appendChild(st);
+  }
+
+  function make(tag, attrs, kids) {
+    var el = document.createElement(tag);
+    Object.keys(attrs || {}).forEach(function (k) {
+      if (k === "text") el.textContent = attrs[k];
+      else if (k === "className") el.className = attrs[k];
+      else el.setAttribute(k, attrs[k]);
+    });
+    (kids || []).forEach(function (kid) { if (kid) el.appendChild(kid); });
+    return el;
+  }
+
+  function addHeader() {
+    addStyle();
+    if (OPTIONS.header === false || document.querySelector(".eg-header")) return;
+    var header = make("header", { className: "eg-header" + (looksLikeKolibriGames() ? " eg-no-title" : "") }, [
+      make("h1", { className: "eg-title", "data-t": titleKey(), text: t(titleKey()) }),
+      make("button", { type: "button", className: "eg-options-button", "data-edugame-options": "", "data-t": "kit.options", text: t("kit.options") })
+    ]);
+    document.body.insertBefore(header, document.body.firstChild);
+  }
+
+  document.addEventListener("click", function (e) {
+    var el = e.target;
+    while (el && el !== document) {
+      if (el.hasAttribute && el.hasAttribute("data-edugame-options")) { e.preventDefault(); openOptions(); return; }
+      el = el.parentNode;
+    }
+  });
+
+  var panel = null;
+
+  function radios(name, items, chosen, onPick) {
+    return items.map(function (item) {
+      var input = make("input", { type: "radio", name: name, value: String(item.value) });
+      input.checked = String(item.value) === String(chosen);
+      input.addEventListener("change", function () { if (input.checked) onPick(item.value); });
+      var kids = [input, document.createTextNode(" ")];
+      if (item.swatch) {   // a colour to show beside the name (a game option's choice can have one)
+        var dot = make("span", { className: "eg-swatch" });
+        dot.style.background = item.swatch;
+        kids.push(dot);
+      }
+      kids.push(document.createTextNode(item.label));
+      if (item.hint) kids.push(document.createTextNode(" "), make("small", { text: item.hint }));
+      return make("label", {}, kids);
+    });
+  }
+
+  function openOptions() {
+    if (panel) return;
+    addStyle();
+    var opener = document.activeElement;
+    var before = { theme: theme(), language: current, options: {} };
+    gameOptions.forEach(function (o) { before.options[o.key] = option(o.key); });
+    var picked = { language: current };
+
+    var appearance = make("fieldset", {}, [make("legend", { text: t("kit.appearance") })].concat(radios("eg-theme", [
+      { value: "light", label: t("kit.theme_light") },
+      { value: "dark", label: t("kit.theme_dark") },
+      { value: "auto", label: t("kit.theme_auto"), hint: t("kit.theme_auto_hint") }
+    ], before.theme, function (v) { setTheme(v, false); picked.theme = v; })));
+
+    var langs = languages();
+    var language = make("fieldset", {}, [make("legend", { text: t("kit.language") })].concat(langs.length > 1
+      ? radios("eg-language", langs.map(function (l) { return { value: l.code, label: l.name }; }), current,
+               function (v) { picked.language = v; })
+      : [make("p", { text: about(current).name })]));
+    langs.forEach(function (l, i) {   // each language name is written in that language
+      var label = language.querySelectorAll("label")[i];
+      if (label) { label.setAttribute("lang", l.code); label.setAttribute("dir", l.dir); }
+    });
+
+    var own = gameOptions.map(function (o) {
+      return make("fieldset", {}, [make("legend", { text: t(o.label) })].concat(radios("eg-opt-" + o.key,
+        o.choices.map(function (c) { return { value: c.value, label: t(c.label), swatch: c.color }; }), before.options[o.key],
+        function (v) { setOption(o.key, v, false); picked["opt:" + o.key] = v; })));
+    });
+
+    var apply = make("button", { type: "button", className: "eg-primary", text: t("kit.apply") });
+    var back = make("button", { type: "button", text: t("kit.back") });
+    var card = make("div", { className: "eg-card" }, [
+      make("h2", { id: "eg-options-title", text: t("kit.options_title") }), appearance, language
+    ].concat(own).concat([make("div", { className: "eg-actions" }, [apply, back])]));
+    panel = make("div", { className: "eg-overlay", role: "dialog", "aria-modal": "true", "aria-labelledby": "eg-options-title" }, [card]);
+
+    function close() {
+      document.removeEventListener("keydown", onKey, true);
+      if (panel && panel.parentNode) panel.parentNode.removeChild(panel);
+      panel = null;
+      if (opener && opener.focus) opener.focus();
+    }
+    function cancel() {   // put back what was there before
+      setTheme(before.theme, false);
+      gameOptions.forEach(function (o) { if (option(o.key) !== before.options[o.key] || picked["opt:" + o.key] !== undefined) setOption(o.key, before.options[o.key], false); });
+      close();
+    }
+    function onKey(e) {
+      if (e.key === "Escape") { e.preventDefault(); cancel(); return; }
+      if (e.key !== "Tab") return;
+      // Keep the keyboard inside the panel while it's open.
+      // Tab stops: each group's chosen radio button (or its first), then the buttons.
+      var focusable = Array.prototype.filter.call(card.querySelectorAll("input, button"), function (el) {
+        if (el.type !== "radio") return true;
+        var group = card.querySelectorAll("input[name='" + el.name + "']");
+        var chosen = card.querySelector("input[name='" + el.name + "']:checked");
+        return chosen ? el === chosen : el === group[0];
+      });
+      if (!focusable.length) return;
+      var first = focusable[0], last = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
+    apply.addEventListener("click", function () {
+      if (picked.theme) setTheme(picked.theme);
+      gameOptions.forEach(function (o) { if (picked["opt:" + o.key] !== undefined) setOption(o.key, picked["opt:" + o.key]); });
+      var changed = picked.language !== before.language;
+      close();
+      if (changed) setLanguage(picked.language);
+    });
+    back.addEventListener("click", cancel);
+    panel.addEventListener("click", function (e) { if (e.target === panel) cancel(); });
+    document.addEventListener("keydown", onKey, true);
+    document.body.appendChild(panel);
+    var firstChoice = card.querySelector("input:checked") || apply;
+    firstChoice.focus();
+  }
+
+  // ------------------------------------------------------------- content
+  // Content that's too big to load all at once (maps, lessons, word lists) lives
+  // in JSON files in the folders edugame.json lists under "content". The build
+  // turns each into a small script (file.json.js), so it also loads straight
+  // from a folder:
+  //   EduGame.load("words/fr.json")              one file, or null if it isn't there
+  //   EduGame.loadLanguage("maps/us/lang")       maps/us/lang/<language>.json for the current
+  //                                              language, with the default language filling gaps
+  //   EduGame.loadLanguage("lessons/01", {merge: false})
+  //                                              the nearest file only: fr-CA, then fr, then the default
+
+  var contentCache = {};
+  var contentWaiting = {};
+
+  function contentLoaded(path, data) {
+    contentCache[path] = data;
+    (contentWaiting[path] || []).forEach(function (fn) { fn(data); });
+    delete contentWaiting[path];
+  }
+
+  function load(path) {
+    if (contentCache.hasOwnProperty(path)) return Promise.resolve(contentCache[path]);
+    // The build lists the content files it put in; anything else isn't there (no need to ask, and see an error).
+    if (Array.isArray(config.content) && config.content.indexOf(path) < 0) return Promise.resolve(null);
+    return new Promise(function (resolve) {
+      if (contentWaiting[path]) { contentWaiting[path].push(resolve); return; }
+      contentWaiting[path] = [resolve];
+      var s = document.createElement("script");
+      s.src = path + ".js";
+      s.onerror = function () { contentLoaded(path, null); };
+      s.onload = function () { if (!contentCache.hasOwnProperty(path)) contentLoaded(path, null); };
+      document.head.appendChild(s);
+    });
+  }
+
+  function merged(a, b) {
+    if (!b || typeof b !== "object" || Array.isArray(b) || !a || typeof a !== "object" || Array.isArray(a)) return b;
+    var out = {};
+    Object.keys(a).forEach(function (k) { out[k] = a[k]; });
+    Object.keys(b).forEach(function (k) { out[k] = k in out ? merged(out[k], b[k]) : b[k]; });
+    return out;
+  }
+
+  function loadLanguage(dir, opts) {
+    opts = opts || {};
+    var code = opts.language || current;
+    var codes = chain(code).reverse();   // the default first, the closest last
+    return Promise.all(codes.map(function (c) { return load(dir + "/" + c + ".json"); })).then(function (files) {
+      if (opts.merge === false) {
+        for (var i = files.length - 1; i >= 0; i--) if (files[i]) return files[i];
+        return null;
+      }
+      return files.reduce(function (acc, f) { return f ? (acc ? merged(acc, f) : f) : acc; }, null);
+    });
+  }
+
   // ------------------------------------------------------------- the API
 
   function ready() {
@@ -512,12 +995,13 @@
     }).then(function (opened) {
       record = opened.record || { _v: VERSION };
       var language = chooseLanguage(opened.language);
-      setLanguage(language);
-      translatePage();
+      applyLanguage(language);
       info = {
         save: record._save === undefined ? null : record._save,
         settings: opened.settings || defaultSettings(),
         language: language,
+        languages: languages(),
+        theme: theme(),
         platform: backend.name,
         player: opened.player || null,
         canExit: !!backend.exit,   // show a "back" button only when the platform has somewhere to go
@@ -564,12 +1048,23 @@
     try { document.dispatchEvent(new CustomEvent("edugame:" + name, { detail: detail || {} })); } catch (e) { /* old browser */ }
   }
 
+  /** A round begins. opts.board: the level. opts.resume: on the Kolibri Games games page,
+   *  carry on an attempt the learner left unfinished (the result says resumed: true). */
   function start(opts) {
+    opts = opts || {};
     return ready().then(function () {
-      var board = cleanBoard(opts && opts.board);
+      var board = cleanBoard(opts.board);
       round = { board: board, startedAt: now() };
       announce("start", { board: board });
-      return backend.start ? backend.start(board) : null;
+      return backend.start ? backend.start(board, opts.resume) : null;
+    });
+  }
+
+  /** The round ends without a result (the learner gave up, or it wasn't a real round). */
+  function abandon() {
+    return ready().then(function () {
+      round = null;
+      return backend.abandon ? backend.abandon() : null;
     });
   }
 
@@ -628,6 +1123,10 @@
   }
 
   function on(name, fn) {
+    if (OWN_EVENTS.indexOf(name) >= 0) {
+      (handlers[name] = handlers[name] || []).push(fn);
+      return;
+    }
     ready().then(function () { if (backend.on) backend.on(name, fn); });
   }
 
@@ -651,13 +1150,34 @@
     finish: finish,
     move: move,
     scoreboard: scoreboard,
+    abandon: abandon,
     on: on,
+    // languages
     t: t,
+    lines: lines,
+    number: number,
     translatePage: translatePage,
+    language: function () { return current; },
+    languages: languages,
+    setLanguage: setLanguage,
+    // appearance and options
+    theme: theme,
+    setTheme: setTheme,
+    addOption: addOption,
+    option: option,
+    openOptions: openOptions,
+    // content
+    load: load,
+    loadLanguage: loadLanguage,
+    _content: contentLoaded,   // called by the build's content scripts
     exit: exit,
     // for tests and the test page
     _compare: function (a, b) { return compare(a, b); },
     _keep: function (old, r, plays) { return keep(old, r, plays); },
     _percent: function (values) { return percent(values); }
   };
+
+  // The header with the Options button, as soon as the page is there.
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", addHeader);
+  else addHeader();
 })();

@@ -39,10 +39,14 @@
     EduGame.finish(right).then(function (r) {
       $("result").textContent = t("result", { score: r.score, seconds: Math.round(r.seconds) });
       $("new-best").hidden = !r.newBest;
+      shownBest = r.best;
       showBest(r.best);
       screen("done");
     });
   });
 
-  EduGame.ready().then(function (info) { showBest(info.best); });
+  var shownBest = null;
+  EduGame.ready().then(function (info) { shownBest = info.best; showBest(info.best); });
+  // The learner chose another language in Options: redo the words made here.
+  EduGame.on("languagechange", function () { showBest(shownBest); });
 })();

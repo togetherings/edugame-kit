@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.2.0
+
+- **Options:** the helper adds a header with the game's title and an Options button (only the
+  button on the Kolibri Games games page). The panel lays over the game: Appearance (light, dark or
+  auto, as `data-theme` on the page), Language (each in its own name), and options of the game's
+  own (`EduGame.addOption`). Appearance and options show at once; the language changes on Apply;
+  Back puts things back.
+- **Languages:** the learner's choice is kept in their save, and comes before `?lang=`, the
+  platform's language (Kolibri's, from the Kolibri Games plugin), the browser's and the default.
+  Lang files take lists of paragraphs, plural sets, `_language` (the language's own name and
+  direction) and `_notes` for translators. A regional file (`en-GB`) only needs the words that
+  differ. New calls: `lines`, `number`, `language`, `languages`, `setLanguage`, `on("languagechange")`.
+- **Content:** folders listed under `content` are built into small scripts the game loads when it
+  needs them (`EduGame.load`, `EduGame.loadLanguage`), as translations or as editions. The build
+  lists the files it put in, so the helper never asks for one that isn't there.
+- **Packages:** several zips from one folder (`packages`, `package_files`), with `edugame build
+  --package`, `--lang` and `--each-language`. The GitHub Pages site lists every package.
+- `exclude` in `edugame.json` leaves files out of the game (tools, notes).
+- `edugame check` lists words the code uses that the lang files don't have.
+- The templates and examples use the header, the theme and translated words throughout. Memory
+  Match has an option of its own.
+- Guide: docs/LANGUAGES.md (it replaces TRANSLATING.md).
+
 ## 0.1.0
 
 First version.

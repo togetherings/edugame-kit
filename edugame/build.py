@@ -7,6 +7,11 @@ Building a game folder into files for each platform.
 * build_sugarizer: a zip holding <Name>.activity/, for Sugarizer.
 * build_zim: a ZIM file for Kiwix (needs the libzim package).
 * build_folder: the game with its generated files, unzipped (used by the test page).
+* build_all: everything the command line asks for, for every package and language.
+
+Content JSON (in the folders edugame.json lists under "content") goes into the
+zips as small scripts, file.json.js, so the save helper can load it when it's
+needed, even from a folder (see EduGame.load in runtime/edugame.js).
 """
 import json
 import os
@@ -67,14 +72,40 @@ def _read(project, rel):
         return f.read()
 
 
+def content_script(rel, data):
+    """A content JSON file as a script the save helper loads (EduGame.load)."""
+    try:
+        value = json.loads(data.decode("utf-8"))
+    except ValueError as e:
+        raise ValueError("%s isn't valid JSON: %s" % (rel, e))
+    return ("/* Made by EduGame Kit from %s. Edit that file, not this one. */\n"
+            "EduGame._content(%s, %s);\n" % (rel, json.dumps(rel), json.dumps(value, ensure_ascii=False, separators=(",", ":"))))
+
+
 def entries(project, **extra):
-    out = [(rel, _read(project, rel)) for rel in project.files()]
+    out = []
+    for rel in project.files():
+        data = _read(project, rel)
+        if project.is_content(rel):
+            out.append((rel + ".js", content_script(rel, data).encode("utf-8")))
+        else:
+            out.append((rel, data))
     out += [(name, text.encode("utf-8")) for name, text in sorted(generated(project, **extra).items())]
     return out
 
 
+def file_name(project, ext=".zip", suffix=""):
+    """<game>[-<package>][-<language>]-<version><suffix><ext>, for the zips of one build."""
+    parts = [project.slug]
+    if project.package:
+        parts.append(project.package["id"])
+    if getattr(project, "one_language", False):
+        parts.append(project.language)
+    return "-".join(parts) + "-" + project.version + suffix + ext
+
+
 def build_zip(project, out_dir):
-    path = os.path.join(out_dir, "%s-%s.zip" % (project.slug, project.version))
+    path = os.path.join(out_dir, file_name(project))
     return _write_zip(path, entries(project))
 
 
@@ -128,7 +159,7 @@ def build_sugarizer(project, out_dir, sugar_lib=None):
                 rel = os.path.relpath(full, sugar_lib).replace(os.sep, "/")
                 with open(full, "rb") as f:
                     out.append((folder + "/lib/" + rel, f.read()))
-    path = os.path.join(out_dir, "%s-%s-sugarizer.zip" % (project.slug, project.version))
+    path = os.path.join(out_dir, file_name(project, suffix="-sugarizer"))
     return _write_zip(path, out)
 
 
@@ -164,7 +195,7 @@ def build_zim(project, out_dir):
         def get_hints(self):
             return {Hint.FRONT_ARTICLE: self.path == project.entry}
 
-    path = os.path.join(out_dir, "%s_%s.zim" % (project.slug, project.version))
+    path = os.path.join(out_dir, file_name(project, ext=".zim"))
     os.makedirs(out_dir, exist_ok=True)
     if os.path.exists(path):
         os.remove(path)
@@ -198,3 +229,32 @@ def read_zip(path, name):
     with zipfile.ZipFile(path) as z:
         return z.read(name)
 
+
+
+def variants(project, package=None, languages=None, each_language=False):
+    """The builds to make: every package (or the one asked for), each in every language or one at a time."""
+    pkgs = [package] if package else ([p["id"] for p in project.packages()] or [None])
+    out = []
+    for pkg in pkgs:
+        v = project.variant(pkg, languages)
+        if each_language:
+            for code in v.languages:
+                one = v.variant(pkg, [code]) if pkg else project.variant(None, [code])
+                one.one_language = True
+                out.append(one)
+        else:
+            out.append(v)
+    return out
+
+
+def build_all(project, out_dir, package=None, languages=None, each_language=False,
+              sugarizer=False, sugar_lib=None, zim=False):
+    """Every zip asked for. Returns the paths made; raises ImportError for --zim without libzim."""
+    made = []
+    for v in variants(project, package, languages, each_language):
+        made.append(build_zip(v, out_dir))
+        if sugarizer:
+            made.append(build_sugarizer(v, out_dir, sugar_lib))
+        if zim:
+            made.append(build_zim(v, out_dir))
+    return made

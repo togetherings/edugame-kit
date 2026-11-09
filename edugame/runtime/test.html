@@ -121,7 +121,13 @@
   $("reload").addEventListener("click", start);
   $("reset").addEventListener("click", function () {
     cmi = {}; store();
-    try { $("game").contentWindow.localStorage.removeItem("edugame:" + gameId); } catch (e) { /* not reachable */ }
+    try {
+      // The save, and the choices the helper keeps on this device (language, theme, options).
+      var ls = $("game").contentWindow.localStorage;
+      Object.keys(ls).forEach(function (k) {
+        if (k === "edugame:" + gameId || k.indexOf("edugame:" + gameId + ":") === 0) ls.removeItem(k);
+      });
+    } catch (e) { /* not reachable */ }
     start();
   });
   setInterval(show, 1000);

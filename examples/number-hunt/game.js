@@ -159,6 +159,12 @@
   });
 
   EduGame.ready().then(function (info) {
+    showIntro(info);
+    // The learner chose another language in Options: redo the words made here.
+    EduGame.on("languagechange", function () { showIntro(info); });
+  }).catch(function (err) { error("intro", err.message); });
+
+  function showIntro(info) {
     var high = Number(info.settings.max) || 100;
     S.top = high;
     $("intro-text").textContent = t("intro", { high: high });
@@ -170,5 +176,5 @@
     bits.push(t("perfect", { n: Math.ceil(Math.log2(high + 1)) }));
     if (info.best !== null && !rules) bits.push(t("best", { n: info.best }));
     $("intro-rule").textContent = bits.join(" ");
-  }).catch(function (err) { error("intro", err.message); });
+  }
 })();

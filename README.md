@@ -67,7 +67,7 @@ planned: see [docs/LTI.md](docs/LTI.md).
 - [docs/MAKING_GAMES.md](docs/MAKING_GAMES.md): the game folder, `edugame.json` and the commands
 - [docs/SCORING.md](docs/SCORING.md): scores, levels and which round counts
 - [docs/HELPER.md](docs/HELPER.md): the save helper's calls, and what it saves where
-- [docs/TRANSLATING.md](docs/TRANSLATING.md): adding languages
+- [docs/LANGUAGES.md](docs/LANGUAGES.md): words, languages, the Options button, content and packages
 - [CHANGELOG.md](CHANGELOG.md)
 
 ## Development

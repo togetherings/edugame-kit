@@ -4,13 +4,18 @@
 
 ```
 my-game/
-  edugame.json     what the game is (below)
-  lang/en.json     its words, one file per language
+  edugame.json     what the game is (below): settings, no words
+  lang/en.json     every word it shows, one file per language
   lang/fr.json
   index.html       the start page
   game.js          your game
   style.css, icon.svg, pictures, sounds ...
+  lessons/ maps/ ...   content, if it has a lot (see LANGUAGES.md)
 ```
+
+The kit adds a header to the top of the page, with the game's title and an **Options** button
+(appearance, language, and options of your own). Don't put the title in your page too. See
+[LANGUAGES.md](LANGUAGES.md).
 
 `edugame new my-game --type saved` (or `--type scored`) makes one from a template. The start page
 must load the two files the build makes, before your own script:
@@ -73,6 +78,10 @@ Don't add `edugame.js`, `edugame-config.js`, `kolibri-game.json`, `imsmanifest.x
 | `icon`, `color` | no | An icon file (SVG works everywhere) and an accent colour, used by Kolibri Games, RACHEL, Sugarizer and Kiwix. |
 | `scoring` | Scored Games | What the scores are and how they compare: see [SCORING.md](SCORING.md). |
 | `settings` | no | Options coaches can change on the Kolibri Games games page (the format is in Kolibri Games' [GAME_FORMAT.md](https://github.com/togetherings/kolibri-games/blob/main/docs/GAME_FORMAT.md)). Everywhere else, the game gets the `default` values. |
+| `options` | no | The Options button: `{"theme": "auto", "header": true}`. See [LANGUAGES.md](LANGUAGES.md). |
+| `exclude` | no | Files in the folder that aren't part of the game, like `["tools/*", "docs/*", "*.md"]`. |
+| `content` | no | Folders of content JSON, loaded when needed: `["lessons", "maps"]`. |
+| `packages`, `package_files` | no | Several zips from one folder, each with part of the content. |
 | `authors`, `license` | no | Shown by platforms that list them. |
 
 The title and description come from the default language's `lang/<code>.json` (`title`,
@@ -90,7 +99,8 @@ See **[SCORING.md](SCORING.md)**.
 edugame new my-game --type scored [--id org.example.my-game] [--title "My game"]
 edugame check my-game         # problems, and words a language is missing
 edugame preview my-game       # the test page; reload it after you change the game
-edugame build my-game         # dist/<name>-<version>.zip
+edugame build my-game         # dist/<name>-<version>.zip (one for each package)
+edugame build my-game --package lesson-01 --lang fr --each-language
 edugame build my-game --sugarizer [--sugar-lib path/to/lib] --zim
 edugame translate my-game sw  # add Kiswahili: copies the English words to translate
 edugame pages my-game -o site # a GitHub Pages site (see platforms/GITHUB_PAGES.md)
@@ -110,8 +120,10 @@ into a folder and run `kolibri-games-preview <that folder's parent>` (from kolib
 
 ## Making an existing game a kit game
 
-1. Add `edugame.json` and `lang/en.json` (at least a `title`).
-2. Load `edugame-config.js` and `edugame.js` before your script.
+1. Add `edugame.json` and `lang/en.json` (at least a `title`). Move every word the game shows
+   into `lang/`, and big content into its own folders (see [LANGUAGES.md](LANGUAGES.md)).
+2. Load `edugame-config.js` and `edugame.js` before your script. Take out your own title and any
+   settings page: the kit's header and Options panel do that.
 3. Replace your own saving with `EduGame.save()` and read it back from `EduGame.ready()`.
 4. For a Scored Game, call `EduGame.start()` when a round begins and `EduGame.finish(score)` when
    it ends.

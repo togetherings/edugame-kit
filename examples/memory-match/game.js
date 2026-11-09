@@ -112,7 +112,7 @@
       });
       S.open = [];
       S.busy = false;
-    }, 850);
+    }, EduGame.option("speed") === "slow" ? 2000 : 850);
   }
 
   function win() {
@@ -153,13 +153,25 @@
     $("done").hidden = false;
   });
 
-  EduGame.ready().then(function (info) {
-    S.pairs = Number(info.settings.pairs || 8);
-    $("btn-exit").hidden = !info.canExit;
+  // A choice of our own in the Options panel: how long two wrong cards stay face up.
+  EduGame.addOption({
+    key: "speed", label: "option_speed", "default": "normal",
+    choices: [{ value: "normal", label: "speed_normal" }, { value: "slow", label: "speed_slow" }]
+  });
+
+  function showRule(info) {
     var rule = t("rule");
     if (info.rules && info.rules.time_limit) rule += " " + t("minutes", { n: Math.round(info.rules.time_limit / 60) });
     if (info.best !== null && !info.rules) rule += " " + t("best", { n: info.best });
     $("rule").textContent = rule;
+  }
+
+  EduGame.ready().then(function (info) {
+    S.pairs = Number(info.settings.pairs || 8);
+    $("btn-exit").hidden = !info.canExit;
+    showRule(info);
+    // translatePage() redoes the data-t words; the ones made here need redoing too.
+    EduGame.on("languagechange", function () { showRule(info); updateStats(); });
     begin();
   }).catch(function (err) { showError(err.message); });
 })();

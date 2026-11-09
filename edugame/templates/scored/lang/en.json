@@ -1,4 +1,8 @@
 {
+  "_language": {
+    "name": "English",
+    "dir": "ltr"
+  },
   "title": "My game",
   "description": "Answer ten sums as fast as you can.",
   "score_label": "Right answers",

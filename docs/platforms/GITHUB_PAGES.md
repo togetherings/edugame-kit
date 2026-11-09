@@ -13,6 +13,9 @@ site/
   play/        the game itself (saves stay in the visitor's browser)
 ```
 
+A game with `packages` in its `edugame.json` gets each package at `play/<package id>/`, and the
+front page lists them, each with its own Play button.
+
 The kit publishes one of its own examples this way: Number Hunt, at
 `https://togetherings.github.io/edugame-kit/` (see `.github/workflows/pages.yml`).
 

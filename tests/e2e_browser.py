@@ -3,7 +3,7 @@ Plays the example games in Chromium, the way each platform runs them:
 
 * in the test page as a learning system (SCORM 1.2, like Kolibri Learn and Moodle)
 * in the test page as a website (RACHEL, Kiwix: saves in the browser)
-* in French, with ?lang=fr
+* in French, with ?lang=fr, and with the kit's Options panel
 * on the Kolibri Games games page (when kolibri-games is installed)
 
     python -m tests.e2e_browser [--screenshots DIR]
@@ -23,6 +23,7 @@ from edugame import build, cli, project as projects
 from tests.helpers import EXAMPLES, TEMPLATES
 
 NUMBER_HUNT = os.path.join(EXAMPLES, "number-hunt")
+MEMORY = os.path.join(EXAMPLES, "memory-match")
 SAVED = os.path.join(TEMPLATES, "saved")
 LESSONS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fixtures", "lessons")
 
@@ -88,7 +89,7 @@ def check_scorm(page, base, shots):
 
 def check_french(page, base):
     frame = test_page(page, base, "local", lang="fr")
-    frame.locator("h1:has-text('Chasse au nombre')").wait_for()
+    frame.locator(".eg-title:has-text('Chasse au nombre')").wait_for()
     assert frame.locator("#btn-start").inner_text() == "Commencer"
     assert frame.locator("html").get_attribute("lang") == "fr"
     assert "Je pense à un nombre de 1 à 100." in frame.locator("#intro-text").inner_text()
@@ -110,6 +111,47 @@ def check_local_save(page, base, shots):
     # Translations: the same game in French.
     page.select_option("#lang", "fr")
     page.frame_locator("#game").locator("#level:has-text('Niveau 3 sur 5')").wait_for()
+
+
+def check_options(browser, base, shots):
+    """The kit's Options panel: the theme shows at once, Back puts it back, the language changes on Apply."""
+    page = browser.new_page(viewport={"width": 1000, "height": 760}, color_scheme="light")
+    frame = test_page(page, base, "scorm")
+    html = frame.locator("html")
+    frame.locator(".eg-header .eg-title:has-text('Memory Match')").wait_for()
+    assert html.get_attribute("data-theme") == "light"
+    frame.locator(".eg-options-button").click()
+    card = frame.locator(".eg-card")
+    card.wait_for()
+    assert card.locator("label[lang=fr]").inner_text().strip() == "Français"
+    assert card.locator("legend", has_text="Wrong cards stay face up").count() == 1  # the game's own option
+    card.locator("input[name=eg-theme][value=dark]").check()
+    assert html.get_attribute("data-theme") == "dark"                     # shown straight away
+    page.keyboard.press("Escape")
+    assert html.get_attribute("data-theme") == "light" and card.count() == 0  # Back puts it back
+    frame.locator(".eg-options-button").click()
+    card.locator("input[name=eg-theme][value=dark]").check()
+    card.locator("label[lang=fr]").click()
+    assert frame.locator(".eg-title").inner_text() == "Memory Match"      # the language waits for Apply
+    if shots:
+        page.screenshot(path=os.path.join(shots, "6-options.png"))
+    card.locator("button.eg-primary").click()
+    frame.locator(".eg-title:has-text('Paires de cartes')").wait_for()
+    frame.locator(".eg-options-button:has-text('Options')").wait_for()
+    frame.locator("[data-t=again]:has-text('Rejouer')").wait_for(state="attached")
+    assert html.get_attribute("lang") == "fr" and html.get_attribute("data-theme") == "dark"
+    # The language is kept with the learner's save (here, the learning system's), the theme on this device.
+    record = json.loads(page.evaluate(
+        "() => JSON.parse(localStorage.getItem('edugame-test-scorm:org.togetherings.memory-match'))['cmi.suspend_data']"))
+    assert record["_lang"] == "fr", record
+    page.locator("#reload").click()
+    page.frame_locator("#game").locator("html[lang=fr][data-theme=dark]").wait_for()
+    # On a phone the header still fits.
+    page.set_viewport_size({"width": 390, "height": 800})
+    assert page.frame_locator("#game").locator("body").evaluate("b => b.scrollWidth <= b.clientWidth + 1")
+    page.locator("#reset").click()
+    page.frame_locator("#game").locator("html[lang=en][data-theme=light]").wait_for()
+    page.close()
 
 
 def lessons_cmi(page):
@@ -215,6 +257,9 @@ def check_kolibri_games(browser, shots):
         page.goto(base + "?as=amina#/play/g-org.togetherings.number-hunt")
         frame = page.frame_locator("iframe.game-frame")
         frame.locator("#intro-rule:has-text('Your first attempt is the one that counts')").wait_for()
+        # The games page shows the title already: the kit's header has only the Options button.
+        frame.locator(".eg-header.eg-no-title .eg-options-button").wait_for()
+        assert frame.locator(".eg-title").is_hidden()
         frame.locator("#btn-start").click()
         guesses = binary_search(frame)
         frame.locator("#done-standing:has-text('number 1 of 1')").wait_for()
@@ -269,6 +314,7 @@ def main():
     hunt, hunt_url = serve(NUMBER_HUNT)
     saved, saved_url = serve(SAVED)
     lessons, lessons_url = serve(LESSONS)
+    memory, memory_url = serve(MEMORY)
     errors = []
     try:
         with sync_playwright() as p:
@@ -280,6 +326,7 @@ def main():
             check_french(page, hunt_url)
             check_local_save(page, saved_url, shots)
             check_lessons(page, lessons_url)
+            check_options(browser, memory_url, shots)
             # Phone width: the test page and the games fit.
             phone = browser.new_page(viewport={"width": 390, "height": 800}, is_mobile=True)
             test_page(phone, hunt_url, "scorm").locator("#btn-start").wait_for()
@@ -292,6 +339,7 @@ def main():
         hunt.shutdown()
         saved.shutdown()
         lessons.shutdown()
+        memory.shutdown()
     if errors:
         print("\n".join(errors))
         sys.exit("Browser errors (see above).")
