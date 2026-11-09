@@ -276,7 +276,9 @@ def check_kolibri_games(browser, shots):
         frame.locator("#where:has-text('your account')").wait_for()
         q = frame.locator("#question").inner_text()
         a, b = [int(x) for x in q.replace("What is ", "").rstrip("?").split(" + ")]
-        frame.locator("#answers button", has_text=str(a + b)).first.click()
+        # Wait until the plugin has the save before leaving the page (on a slow machine it can still be on its way).
+        with page.expect_response(lambda r: r.url.endswith("/state") and r.request.method == "POST"):
+            frame.locator("#answers button", has_text=str(a + b)).first.click()
         frame.locator("#level:has-text('Level 2 of 5')").wait_for()
         page.goto(base + "?as=ben#/")
         page.goto(base + "?as=amina#/play/g-org.example.my-game")

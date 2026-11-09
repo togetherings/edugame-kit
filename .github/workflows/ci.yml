@@ -18,15 +18,15 @@ jobs:
   unit:
     name: Unit tests (Python ${{ matrix.python }})
     runs-on: ubuntu-latest
+    # Python's own images, so old versions keep working after GitHub's runners drop them
+    # (ubuntu-latest, Ubuntu 26.04, has no Python 3.8 or 3.9).
+    container: python:${{ matrix.python }}
     strategy:
       fail-fast: false
       matrix:
         python: ["3.9", "3.11", "3.13"]
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python }}
       - run: pip install pytest libzim -e . "$KOLIBRI_GAMES"
       - run: tools/ci_run.sh "Unit tests" python -m pytest -q -rs
       - name: Build the examples
@@ -35,11 +35,9 @@ jobs:
   without-kolibri-games:
     name: Unit tests (the kit alone)
     runs-on: ubuntu-latest
+    container: python:3.8          # the oldest Python the kit supports
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.8"
       - run: pip install pytest -e .
       - run: tools/ci_run.sh "Unit tests" python -m pytest -q -rs
       - name: The installed kit makes and builds a game
