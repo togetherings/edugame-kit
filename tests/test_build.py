@@ -198,3 +198,23 @@ def test_new_game_with_a_github_pages_workflow(tmp_path):
     workflow = open(os.path.join(folder, ".github", "workflows", "pages.yml")).read()
     assert "edugame pages . -o _site" in workflow and "vars.GOATCOUNTER_CODE" in workflow
     assert not any(n.startswith(".github") for n in projects.load(folder).files())
+    build_workflow = open(os.path.join(folder, ".github", "workflows", "build.yml")).read()
+    assert "edugame check ." in build_workflow and "gh release upload" in build_workflow
+
+
+def test_the_template_repository_is_a_working_game(tmp_path):
+    import importlib.util
+
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    spec = importlib.util.spec_from_file_location("make_template_repo", os.path.join(root, "tools", "make_template_repo.py"))
+    tool = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(tool)
+    out = tool.make(str(tmp_path / "template"))
+    names = sorted(os.listdir(out))
+    assert {"README.md", "edugame.json", "index.html", "lang", ".github"} <= set(names)
+    with open(os.path.join(out, "README.md"), encoding="utf-8") as f:
+        assert "Use this template" in f.read()
+    p = projects.load(out)
+    assert p.id == "org.example.my-game" and p.title == "My game" and not projects.missing_strings(p)
+    assert "README.md" not in p.files()          # notes for the repository, not part of the game
+    build.build_folder(p, str(tmp_path / "built"))

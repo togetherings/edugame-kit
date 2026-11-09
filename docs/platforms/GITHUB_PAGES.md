@@ -22,7 +22,10 @@ The kit publishes one of its own examples this way: Number Hunt, at
 ## Setting it up for a game's repository
 
 1. Make the repository with the game folder at its top (`edugame.json`, `index.html`, `lang/` ...).
-   `edugame new my-game --github` adds the workflow for you, as `.github/workflows/pages.yml`.
+   The quickest way is **Use this template** on
+   [edugame-template](https://github.com/togetherings/edugame-template), which has everything already.
+   `edugame new my-game --github` adds the workflow for you, as `.github/workflows/pages.yml` (with
+   `build.yml`, which builds the zips).
    For a game made earlier, copy
    [`edugame/templates/github/pages.yml`](../../edugame/templates/github/pages.yml) there.
 2. Push it to GitHub. Free GitHub Pages need a public repository.

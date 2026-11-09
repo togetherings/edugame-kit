@@ -32,11 +32,15 @@ itself gets no score: it would read one as how much of a resource is done.
 
 ## Start
 
-You need Python 3.8 or later. Nothing else.
+**Without installing anything:** open [edugame-template](https://github.com/togetherings/edugame-template) and click
+**Use this template**. You change the game in GitHub's editor, and GitHub checks it, builds the zips and publishes
+its web page for you.
+
+**On your own computer:** you need Python 3.8 or later. Nothing else.
 
 ```bash
 pip install git+https://github.com/togetherings/edugame-kit
-edugame new my-game --type scored    # or --type saved
+edugame new my-game --type scored    # or --type saved; add --github for the GitHub workflows
 edugame preview my-game              # play it in the test page
 edugame build my-game                # dist/my-game-0.1.0.zip
 edugame build my-game --all          # also the Sugarizer activity and, with libzim, the ZIM file
@@ -80,6 +84,11 @@ python -m tests.e2e_browser      # plays the examples in Chromium
 
 Install [kolibri-games](https://github.com/togetherings/kolibri-games) as well to also test the
 games on its games page and check the zips with its own checks.
+
+The template repository, [edugame-template](https://github.com/togetherings/edugame-template), is made from the
+saved starter by `tools/make_template_repo.py`. The `Template repository` workflow pushes it there whenever the
+starter changes on `main`, using a deploy key kept as the secret `TEMPLATE_DEPLOY_KEY`. Change the starter here,
+never in the template repository.
 
 ## License
 

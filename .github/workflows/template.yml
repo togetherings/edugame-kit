@@ -1,0 +1,61 @@
+# Keeps github.com/togetherings/edugame-template up to date with the kit's starter game.
+# Runs when the starter changes on main: makes the files with tools/make_template_repo.py and
+# pushes them to the template repository (only if something changed).
+#
+# Setup (once): a deploy key with write access on edugame-template (its Settings > Deploy keys),
+# and the private half here as the secret TEMPLATE_DEPLOY_KEY. Without the secret this does nothing.
+name: Template repository
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "edugame/templates/**"
+      - "edugame/cli.py"
+      - "tools/make_template_repo.py"
+      - "tools/template-repo/**"
+      - ".github/workflows/template.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: template-repository
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    env:
+      HAS_KEY: ${{ secrets.TEMPLATE_DEPLOY_KEY != '' }}
+    steps:
+      - name: Skip without the deploy key
+        if: env.HAS_KEY != 'true'
+        run: echo "::notice::No TEMPLATE_DEPLOY_KEY secret, so the template repository isn't updated."
+      - uses: actions/checkout@v4
+        if: env.HAS_KEY == 'true'
+      - uses: actions/setup-python@v5
+        if: env.HAS_KEY == 'true'
+        with:
+          python-version: "3.11"
+      - name: Check out the template repository
+        if: env.HAS_KEY == 'true'
+        uses: actions/checkout@v4
+        with:
+          repository: togetherings/edugame-template
+          ssh-key: ${{ secrets.TEMPLATE_DEPLOY_KEY }}
+          path: template
+      - name: Make the files and push them if they changed
+        if: env.HAS_KEY == 'true'
+        run: |
+          python tools/make_template_repo.py "$RUNNER_TEMP/new"
+          # Replace everything but the repository's own history and license.
+          find template -mindepth 1 -maxdepth 1 ! -name .git ! -name LICENSE -exec rm -rf {} +
+          cp -a "$RUNNER_TEMP/new/." template/
+          cd template
+          git add -A
+          if git diff --cached --quiet; then echo "The template is already up to date."; exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Update from edugame-kit ${GITHUB_SHA::7}" -m "https://github.com/${GITHUB_REPOSITORY}/commit/${GITHUB_SHA}"
+          git push
