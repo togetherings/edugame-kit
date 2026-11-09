@@ -2,6 +2,10 @@
 
 ## 0.2.0
 
+- **Rulesets** for game repositories in `docs/rulesets/`: one for repositories with code (pull requests only, and
+  the check **Checks passed** must pass), one for repositories a workflow writes to. The kit's tests and the
+  starter's Build workflow have a **Checks passed** job, so new games fit the ruleset from the start.
+
 - **Options:** the helper adds a header with the game's title and an Options button (only the
   button on the Kolibri Games games page). The panel lays over the game: Appearance (light, dark or
   auto, as `data-theme` on the page), Language (each in its own name), and options of the game's
