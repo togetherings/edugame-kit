@@ -36,6 +36,9 @@ The kit publishes one of its own examples this way: Number Hunt, at
 
 The `.github` folder is never put in the game's zips.
 
+To keep `main` safe, import the ruleset [`docs/rulesets/protect-main.json`](../rulesets/README.md): changes then
+reach `main` through pull requests, and only when the Build workflow's **Checks passed** job passes.
+
 ## Counting visits with GoatCounter
 
 [GoatCounter](https://www.goatcounter.com/) counts visits without cookies and without collecting

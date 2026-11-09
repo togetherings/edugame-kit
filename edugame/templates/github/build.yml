@@ -22,6 +22,8 @@ env:
 
 jobs:
   build:
+    # The name the "Protect main" ruleset asks for: see the ruleset in docs/platforms/GITHUB_PAGES.md.
+    name: Checks passed
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
