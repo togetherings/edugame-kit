@@ -22,6 +22,10 @@
 - The templates and examples use the header, the theme and translated words throughout. Memory
   Match has an option of its own.
 - Guide: docs/LANGUAGES.md (it replaces TRANSLATING.md).
+- **Template repository:** github.com/togetherings/edugame-template, made from the saved starter and kept up to
+  date by a workflow, for making a game without installing anything.
+- `edugame new --github` also adds a Build workflow: it checks the game, keeps the zips from each push, and attaches
+  them to each release.
 
 ## 0.1.0
 

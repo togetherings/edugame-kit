@@ -59,13 +59,15 @@ def cmd_new(args):
     if args.github:
         workflows = os.path.join(args.folder, ".github", "workflows")
         os.makedirs(workflows, exist_ok=True)
-        shutil.copy(os.path.join(TEMPLATES, "github", "pages.yml"), os.path.join(workflows, "pages.yml"))
+        for name in ("pages.yml", "build.yml"):
+            shutil.copy(os.path.join(TEMPLATES, "github", name), os.path.join(workflows, name))
     print("Made %s, a %s Game. Next:" % (args.folder, "Saved" if args.type == "saved" else "Scored"))
     print("  edugame preview %s    try it" % args.folder)
     print("  edugame build %s      make the zip" % args.folder)
     print("Change the id in edugame.json to one of your own before you share the game.")
     if args.github:
-        print("For GitHub Pages: make the folder a repository, push it, and in Settings > Pages choose GitHub Actions.")
+        print("On GitHub: make the folder a repository and push it. The Build workflow makes the zips (and attaches")
+        print("them to each release); for the web page, choose GitHub Actions in Settings > Pages.")
 
 
 def cmd_check(args):
@@ -271,7 +273,7 @@ def main(argv=None):
     p.add_argument("--type", choices=("saved", "scored"), default="saved", help="Saved Games keep progress; Scored Games also keep a score")
     p.add_argument("--id", help="the game's id, like org.example.my-game")
     p.add_argument("--title")
-    p.add_argument("--github", action="store_true", help="also add a workflow that publishes the game to GitHub Pages")
+    p.add_argument("--github", action="store_true", help="also add workflows that build the zips and publish the game to GitHub Pages")
     p.set_defaults(func=cmd_new)
 
     p = sub.add_parser("check", help="find problems and missing translations")

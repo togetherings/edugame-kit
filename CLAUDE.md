@@ -19,6 +19,8 @@
 - Words live in `lang/<code>.json` (with `_language` and `_notes`), content in the folders under
   `content`, settings in edugame.json: docs/LANGUAGES.md. The helper owns the language choice, the
   header and the Options panel; games don't add their own title or settings page.
+- The template repository (togetherings/edugame-template) is generated from `edugame/templates/` by
+  `tools/make_template_repo.py` and pushed by the `Template repository` workflow: change the starter here, not there.
 - Tests: `python -m pytest`; `python -m tests.e2e_browser` (Playwright; plays on the Kolibri Games
   games page too when kolibri-games is installed).
 - Bump `__version__` in `edugame/__init__.py` and add a CHANGELOG entry before a release. Releases
