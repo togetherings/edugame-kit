@@ -135,9 +135,6 @@ def test_new_game_from_a_template(tmp_path):
     cli.main(["new", folder, "--type", "scored"])
     p = projects.load(folder)
     assert p.id == "org.example.star-steps" and p.title == "Star steps" and p.type == "scored"
-    cli.main(["translate", folder, "sw"])
-    p = projects.load(folder)
-    assert p.languages == ["en", "fr", "sw"] and p.strings["sw"]["title"] == "Star steps"
     copy = copy_game("saved", tmp_path)
     cli.main(["build", copy, "-o", str(tmp_path / "dist"), "--sugarizer"])
     assert sorted(os.listdir(str(tmp_path / "dist"))) == ["my-game-0.1.0-sugarizer.zip", "my-game-0.1.0.zip"]

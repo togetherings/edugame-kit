@@ -102,7 +102,7 @@ edugame preview my-game       # the test page; reload it after you change the ga
 edugame build my-game         # dist/<name>-<version>.zip (one for each package)
 edugame build my-game --package lesson-01 --lang fr --each-language
 edugame build my-game --sugarizer [--sugar-lib path/to/lib] --zim
-edugame translate my-game sw  # add Kiswahili: copies the English words to translate
+edugame translate my-game es  # add Spanish: copies the English words to translate
 edugame pages my-game -o site # a GitHub Pages site (see platforms/GITHUB_PAGES.md)
 ```
 

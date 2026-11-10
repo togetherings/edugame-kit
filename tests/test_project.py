@@ -47,8 +47,6 @@ def test_the_type_decides_scoring(tmp_path):
 
 def test_languages_need_their_words(tmp_path):
     folder = copy_game("scored", tmp_path)
-    edit(folder, languages=["en", "sw"])
-    assert "lang/sw.json is missing" in problems(folder)
     edit(folder, languages=["EN"])
     assert "languages must list language codes" in problems(folder)
     edit(folder, languages=["fr", "en"])

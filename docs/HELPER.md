@@ -44,7 +44,7 @@ EduGame.lines("help");          // a list of paragraphs
 EduGame.number(1234.5, 1);      // written the way the language writes numbers
 EduGame.translatePage();        // fill in data-t elements again (done for you when the language changes)
 EduGame.language();             // "fr"
-EduGame.setLanguage("sw");      // change it, and remember the learner's choice
+EduGame.setLanguage("en");      // change it, and remember the learner's choice
 EduGame.on("languagechange", function (e) { /* make your own text again */ });
 
 // Options (see LANGUAGES.md): the panel the header's Options button opens
