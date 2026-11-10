@@ -155,11 +155,7 @@
     pt: { "kit.options": "Opções", "kit.options_title": "Opções", "kit.appearance": "Aparência",
           "kit.theme_light": "Claro", "kit.theme_dark": "Escuro", "kit.theme_auto": "Automático",
           "kit.theme_auto_hint": "(segue a configuração clara ou escura deste dispositivo)", "kit.language": "Idioma",
-          "kit.apply": "Aplicar", "kit.back": "Voltar" },
-    sw: { "kit.options": "Chaguo", "kit.options_title": "Chaguo", "kit.appearance": "Mwonekano",
-          "kit.theme_light": "Mwanga", "kit.theme_dark": "Giza", "kit.theme_auto": "Otomatiki",
-          "kit.theme_auto_hint": "(hufuata mpangilio wa mwanga au giza wa kifaa hiki)", "kit.language": "Lugha",
-          "kit.apply": "Tumia", "kit.back": "Rudi" }
+          "kit.apply": "Aplicar", "kit.back": "Voltar" }
   };
 
   function cleanLanguage(code) {

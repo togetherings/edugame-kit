@@ -34,7 +34,7 @@ A game has three kinds of material, and each lives in its own place:
 - **Keys with a set meaning:** `title` and `description` name the game on every platform;
   `score_label`, `score_unit` and the other scoring labels name scores on scoreboards
   ([SCORING.md](SCORING.md)). Words starting with `kit.` are the kit's own (the Options panel): the
-  helper has them in English, French, Spanish, Portuguese and Kiswahili, and a game's file can
+  helper has them in English, French, Spanish and Portuguese, and a game's file can
   change them or add another language's.
 - Group keys with dots, like `menu.goal` and `help.intro`.
 - Keep whole sentences in one value, with `{names}` for values, so translators can change the word

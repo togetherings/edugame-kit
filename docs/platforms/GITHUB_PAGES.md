@@ -17,7 +17,8 @@ A game with `packages` in its `edugame.json` gets each package at `play/<package
 front page lists them, each with its own Play button.
 
 The kit publishes one of its own examples this way: Number Hunt, at
-`https://togetherings.github.io/edugame-kit/` (see `.github/workflows/pages.yml`).
+`https://togetherings.github.io/edugame-kit/` (see `.github/workflows/pages.yml`, which calls
+`game-pages.yml` as games do).
 
 ## Setting it up for a game's repository
 
@@ -27,7 +28,9 @@ The kit publishes one of its own examples this way: Number Hunt, at
    `edugame new my-game --github` adds the workflow for you, as `.github/workflows/pages.yml` (with
    `build.yml`, which builds the zips).
    For a game made earlier, copy
-   [`edugame/templates/github/pages.yml`](../../edugame/templates/github/pages.yml) there.
+   [`edugame/templates/github/pages.yml`](../../edugame/templates/github/pages.yml) there (see
+   [UPDATING.md](../UPDATING.md)). It calls the kit's `game-pages.yml` at a kit release, which
+   Dependabot keeps up to date.
 2. Push it to GitHub. Free GitHub Pages need a public repository.
 3. In the repository, open **Settings > Pages**, and under **Build and deployment** set
    **Source** to **GitHub Actions**.

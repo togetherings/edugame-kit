@@ -1,6 +1,19 @@
 # Changelog
 
-## Unreleased
+## 0.3.0
+
+### What games need to do
+
+- **Once, to get kit updates as pull requests:** replace `.github/workflows/build.yml` and `pages.yml`
+  with the starter's, which call the kit's workflows at this release, and add `.github/dependabot.yml`.
+  See docs/UPDATING.md. From then on, Dependabot opens a pull request in the game for each kit release.
+- **Save as the learner plays**, not only when the page closes: in Kolibri Learn a save made as the page
+  closes is lost (below). Games that save after every step need nothing.
+- Add `tests/kolibri_play.py` so the real-Kolibri test checks the game's saving (docs/platforms/KOLIBRI.md).
+- **A game with its own save format** should check it when it loads, and never save over one it couldn't read
+  without asking the learner (docs/HELPER.md, "When a save can't be read"). The kit now does this for its record.
+
+### Changes
 
 - **A save that can't be read is never written over.** When what the platform kept is damaged (not
   JSON) or from a newer version of the game, the helper used to treat it as no save, and the game's
@@ -9,6 +22,18 @@
   its own message with `EduGame.on("saveproblem")` and `EduGame.startOver()`. The test page has a
   **Damage the save** button, and `edugame kolibri-test` checks a damaged save survives in a real
   Kolibri. (Found while looking at saving in Plenty Heaps.)
+- **Kit updates reach games as pull requests.** Games' workflows now call the kit's own
+  `.github/workflows/game.yml` (check, build, real Kolibri) and `game-pages.yml` (GitHub Pages) at a kit
+  release (`@v0.3.0`), and the starter has a `.github/dependabot.yml`, so Dependabot opens a pull request
+  in each game when the kit has a new release, with the game's checks run on it. docs/UPDATING.md says
+  how, and how to move a game made earlier. `tools/bump_version.py` changes the version everywhere it's
+  named. The template repository is now updated when a kit release is published, not on every change
+  to main.
+- **Languages:** the kit's own words (the Options panel) are no longer in Kiswahili; they're in English,
+  French, Spanish and Portuguese.
+- **GitHub actions on Node.js 24:** actions/checkout v7, setup-python v7, upload-artifact v7,
+  upload-pages-artifact v5 and deploy-pages v5, in the kit's workflows and the starter's (GitHub stops
+  running actions on Node.js 20). Dependabot keeps them up to date in the kit too.
 - **Kolibri:** a game that isn't finished on the learner's first visit now shows as started. The
   helper sets `incomplete` when the game opens, but only if the status read "not attempted"; Kolibri
   answers "" for a status not set yet, so nothing was set. The test page's Kolibri box now answers

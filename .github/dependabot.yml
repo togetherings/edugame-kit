@@ -1,0 +1,10 @@
+# Keeps the GitHub actions the kit's workflows use up to date (one pull request for all of them).
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]
