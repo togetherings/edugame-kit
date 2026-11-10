@@ -463,7 +463,10 @@
       name: "scorm",
       open: function () {
         try { api.LMSInitialize(""); } catch (e) { /* already started */ }
-        if (get("cmi.core.lesson_status") === "not attempted") set("cmi.core.lesson_status", "incomplete");
+        // A new resource starts "not attempted" in SCORM 1.2, but Kolibri answers "" (nothing set
+        // yet): both mean the learner is starting, so the resource becomes "incomplete".
+        var status = get("cmi.core.lesson_status");
+        if (!status || status === "not attempted") set("cmi.core.lesson_status", "incomplete");
         // "suspend": the learner will come back, so keep suspend_data for next time. Without it,
         // some systems (Moodle) start a fresh attempt next time, and the save is gone.
         set("cmi.core.exit", "suspend");

@@ -187,8 +187,11 @@ def check_lessons(page, base):
     assert saved["cmi.core.lesson_status"] == "passed", saved   # never "completed" (Kolibri ignores it)
     assert saved["cmi.core.score.raw"] == "90", saved            # (95 - 50) / (100 - 50): a learning system's grade
     # In Kolibri, no score is sent: Kolibri would read it as how much is done.
-    page.locator("#reset").click()
     page.locator("#as-kolibri").check()
+    page.locator("#reset").click()            # a new learner, in Kolibri (deleting the save starts the game again)
+    # Kolibri answers "" for a status not set yet: opening the game must still mark it "incomplete".
+    page.wait_for_function("() => (JSON.parse(localStorage.getItem('edugame-test-scorm:org.example.lessons-test') || '{}')"
+                           "['cmi.core.lesson_status']) === 'incomplete'", timeout=5000)
     frame = page.frame_locator("#game")
     frame.locator("#out:has-text('ready')").wait_for()
     finish_lesson(frame, "l1", 80, 30)
