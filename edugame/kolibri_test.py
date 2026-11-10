@@ -16,6 +16,8 @@ What it does (in a throwaway Kolibri, in a temporary folder, so it never touches
    said it should be.
 5. Second visit: the game must get back exactly the save Kolibri kept. Then the play steps'
    came_back() runs, to check the game carries on where the learner left off.
+6. Third visit, after cutting the save in half (as a damaged save would be): the helper must
+   say it can't read it, and nothing may write over it.
 
 Play steps. Without them the test still checks the game opens, connects and reports nothing
 wrong; with them it checks saving and coming back. tests/kolibri_play.py in the game folder
@@ -131,6 +133,9 @@ class Kolibri:
     def record(self, channel):
         return self.shell("read_record.py", EDUGAME_CONTENT_ID=channel["content_id"], EDUGAME_LEARNER=LEARNER)
 
+    def damage(self, channel):
+        return self.shell("damage_record.py", EDUGAME_CONTENT_ID=channel["content_id"], EDUGAME_LEARNER=LEARNER)["damaged"]
+
 
 # ----------------------------------------------------------- the game in Learn
 
@@ -243,7 +248,7 @@ def helper_state(frame, timeout=15):
     end = time.time() + timeout
     state = None
     while time.time() < end:
-        state = frame.evaluate("() => EduGame.ready().then(function (i) { return {platform: i.platform, save: i.save}; })")
+        state = frame.evaluate("() => EduGame.ready().then(function (i) { return {platform: i.platform, save: i.save, problem: i.saveProblem || null}; })")
         if state["platform"] == "scorm":
             break
         time.sleep(1)
@@ -306,6 +311,24 @@ def play(kolibri, channel, play_steps, report, shots):
             game.shot("came-back")
             if play_steps and hasattr(play_steps, "came_back"):
                 play_steps.came_back(game)
+            if not rec.get("suspend_data"):
+                return
+
+            # ---- Third visit, with the save damaged: it must be kept, not written over
+            page.goto(kolibri.base + "en/learn/#/home")
+            page.wait_for_timeout(5000)
+            damaged = kolibri.damage(channel)
+            game.visit = 3
+            game.frame, state = open_game(page, kolibri.base, channel, report, 3)
+            if not game.frame:
+                return
+            report.check(state.get("problem") == "unreadable", "visit 3: the helper says the damaged save can't be read (%s)" % state.get("problem"))
+            page.wait_for_timeout(6000)                # time for anything that saves every few seconds
+            game.shot("damaged")
+            page.goto(kolibri.base + "en/learn/#/home")
+            page.wait_for_timeout(5000)
+            after = kolibri.record(channel)
+            report.check(after.get("suspend_data") == damaged, "the damaged save wasn't written over")
         finally:
             report.check(not errors, "no errors on the page: %s" % errors)
             browser.close()

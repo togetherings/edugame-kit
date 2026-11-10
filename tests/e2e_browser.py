@@ -118,6 +118,64 @@ def check_local_save(page, base, shots):
     page.frame_locator("#game").locator("#level:has-text('Niveau 3 sur 5')").wait_for()
 
 
+def answer_sum(frame):
+    q = frame.locator("#question").inner_text()  # What is a + b?
+    a, b = [int(x) for x in q.replace("What is ", "").rstrip("?").split(" + ")]
+    frame.locator("#answers button", has_text=str(a + b)).first.click()
+
+
+def saved_cmi(page):
+    return page.evaluate("() => JSON.parse(localStorage.getItem('edugame-test-scorm:org.example.my-game') || '{}')")
+
+
+def check_save_problem(page, base, shots):
+    """A save the helper can't read is never written over: the learner chooses."""
+    frame = test_page(page, base, "scorm")
+    page.locator("#reset").click()
+    frame = page.frame_locator("#game")
+    frame.locator("#question:has-text('What is')").wait_for()
+    answer_sum(frame)
+    frame.locator("#level:has-text('Level 2 of 5')").wait_for()
+
+    # Damaged: the helper asks, the game starts afresh, and nothing is saved over it.
+    page.locator("#damage").click()
+    damaged = saved_cmi(page)["cmi.suspend_data"]
+    frame.locator(".eg-problem:has-text('Start over')").wait_for()
+    if shots:
+        page.screenshot(path=os.path.join(shots, "3-save-problem.png"), full_page=True)
+    frame.locator(".eg-problem button:has-text('Play without saving')").click()
+    assert frame.locator(".eg-problem").count() == 0
+    frame.locator("#level:has-text('Level 1 of 5')").wait_for()
+    answer_sum(frame)
+    frame.locator("#level:has-text('Level 2 of 5')").wait_for()
+    page.wait_for_timeout(300)
+    assert saved_cmi(page)["cmi.suspend_data"] == damaged, "a damaged save was written over"
+    problem = page.frame_locator("#game").locator("html").evaluate(
+        "() => EduGame.ready().then(function (i) { return i.saveProblem; })")
+    assert problem == "unreadable", problem
+
+    # Start over: saving begins again.
+    page.locator("#reload").click()
+    frame.locator(".eg-problem button:has-text('Start over')").click()
+    frame.locator("#question:has-text('What is')").wait_for()
+    answer_sum(frame)
+    frame.locator("#level:has-text('Level 2 of 5')").wait_for()
+    page.wait_for_timeout(300)
+    assert json.loads(saved_cmi(page)["cmi.suspend_data"])["_save"] == {"level": 2}
+
+    # From a newer version of the game: kept, with no way to start over.
+    newer = json.dumps({"_v": 99, "_save": {"level": 4}})
+    page.evaluate("(t) => API.LMSSetValue('cmi.suspend_data', t)", newer)
+    page.locator("#reload").click()
+    frame.locator(".eg-problem:has-text('newer version')").wait_for()
+    assert frame.locator(".eg-problem button:has-text('Start over')").count() == 0
+    frame.locator(".eg-problem button").click()
+    answer_sum(frame)
+    page.wait_for_timeout(300)
+    assert saved_cmi(page)["cmi.suspend_data"] == newer, "a save from a newer version was written over"
+    page.locator("#reset").click()
+
+
 def check_options(browser, base, shots):
     """The kit's Options panel: the theme shows at once, Back puts it back, the language changes on Apply."""
     page = browser.new_page(viewport={"width": 1000, "height": 760}, color_scheme="light")
@@ -361,6 +419,7 @@ def main():
             check_scorm(page, hunt_url, shots)
             check_french(page, hunt_url)
             check_local_save(page, saved_url, shots)
+            check_save_problem(page, saved_url, shots)
             check_lessons(page, lessons_url)
             check_options(browser, memory_url, shots)
             # Phone width: the test page and the games fit.

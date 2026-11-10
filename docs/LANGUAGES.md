@@ -26,7 +26,7 @@ A game has three kinds of material, and each lives in its own place:
   [Unicode plural rules](https://www.unicode.org/cldr/charts/latest/supplemental/language_plural_rules.html)
   (`zero`, `one`, `two`, `few`, `many`, `other`); `other` is always needed. The helper picks the
   form for `{n}` (or `{count}`).
-- **`_language`** names the language in itself (`Français`, `Kiswahili`, `العربية`), for the
+- **`_language`** names the language in itself (`Français`, `Español`, `العربية`), for the
   language list in Options, and says which way it's written (`ltr` or `rtl`).
 - **`_notes`** helps translators: where a word is shown, how long it can be. Put it in the default
   language's file. JSON has no comments, so notes go here.
@@ -34,7 +34,7 @@ A game has three kinds of material, and each lives in its own place:
 - **Keys with a set meaning:** `title` and `description` name the game on every platform;
   `score_label`, `score_unit` and the other scoring labels name scores on scoreboards
   ([SCORING.md](SCORING.md)). Words starting with `kit.` are the kit's own (the Options panel): the
-  helper has them in English, French, Spanish, Portuguese and Kiswahili, and a game's file can
+  helper has them in English, French, Spanish and Portuguese, and a game's file can
   change them or add another language's.
 - Group keys with dots, like `menu.goal` and `help.intro`.
 - Keep whole sentences in one value, with `{names}` for values, so translators can change the word
@@ -42,7 +42,7 @@ A game has three kinds of material, and each lives in its own place:
 
 ### Language codes
 
-Use codes like `en`, `fr`, `sw`, `pt-BR`, `es-419` (Latin American Spanish) or `zh-Hans`, in file
+Use codes like `en`, `fr`, `pt-BR`, `es-419` (Latin American Spanish) or `zh-Hans`, in file
 names and in `languages` in `edugame.json`. The first language in `languages` is the default.
 
 A **regional language** only needs the words that differ. With `"languages": ["en", "en-GB"]`,
@@ -52,10 +52,10 @@ rest comes from `lang/en.json`. A word missing in any language comes from the de
 ### Adding a language
 
 ```bash
-edugame translate my-game sw
+edugame translate my-game es
 ```
 
-This adds `sw` to `languages` and makes `lang/sw.json` with the default language's words to
+This adds `es` to `languages` and makes `lang/es.json` with the default language's words to
 translate. Write the language's own name in `_language`. Run it again later to add words the
 language is missing. `edugame check` lists missing words, and also words the game's code or pages
 use (`EduGame.t("key")`, `data-t="key"`) that the default language doesn't have.

@@ -159,7 +159,7 @@ def test_package_mistakes_are_found(tmp_path):
     assert any("packages[2]" in x for x in problems(folder))
     edit(folder, lambda d: d.update(packages=[{"id": "a"}, {"id": "a"}]))
     assert any("twice" in x for x in problems(folder))
-    edit(folder, lambda d: d.update(packages=[{"id": "a", "languages": ["sw"]}]))
+    edit(folder, lambda d: d.update(packages=[{"id": "a", "languages": ["pt"]}]))
     assert any("languages" in x for x in problems(folder))
 
 
