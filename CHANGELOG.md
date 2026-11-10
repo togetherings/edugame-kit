@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- **Kolibri:** a game that isn't finished on the learner's first visit now shows as started. The
+  helper sets `incomplete` when the game opens, but only if the status read "not attempted"; Kolibri
+  answers "" for a status not set yet, so nothing was set. The test page's Kolibri box now answers
+  like Kolibri. (Found by the real-Kolibri test in Bobo na Mi, the first game that isn't finished on
+  its first visit.)
 - **GitHub Pages:** the front page's "Play in" links name each language in itself ("English ·
   Français"), not by the game's title in that language, which many games keep the same in every
   language (they all read "Bobo na Mi"). (Found while putting Bobo na Mi on GitHub Pages.)

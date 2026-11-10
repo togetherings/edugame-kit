@@ -91,7 +91,8 @@
     LMSFinish: function () { scormFinished = true; note("LMSFinish"); return "true"; },
     LMSGetValue: function (name) {
       if (name === "cmi.core.student_name") return "Learner, Test";
-      if (name === "cmi.core.lesson_status") return cmi[name] || "not attempted";
+      // Kolibri answers "" for a status not set yet; other systems answer "not attempted".
+      if (name === "cmi.core.lesson_status") return cmi[name] || ($("as-kolibri").checked ? "" : "not attempted");
       return cmi[name] || "";
     },
     LMSSetValue: function (name, value) {
