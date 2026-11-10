@@ -19,8 +19,8 @@ def test_new_games_come_with_play_steps_that_are_never_shipped(tmp_path):
         with zipfile.ZipFile(build.build_zip(p, str(tmp_path / ("dist-" + kind)))) as z:
             assert not any(n.startswith("tests/") for n in z.namelist())
         workflow = open(os.path.join(folder, ".github", "workflows", "build.yml")).read()
-        assert "edugame kolibri-test ." in workflow and "pip install kolibri playwright" in workflow
-        assert "needs: [build, kolibri]" in workflow and "name: Checks passed" in workflow
+        assert "edugame-kit/.github/workflows/game.yml@v" in workflow
+        assert "needs: [kit]" in workflow and "name: Checks passed" in workflow
 
 
 def test_the_examples_play_steps_load():

@@ -26,7 +26,7 @@ jobs:
       matrix:
         python: ["3.9", "3.11", "3.13"]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: pip install pytest libzim -e . "$KOLIBRI_GAMES"
       - run: tools/ci_run.sh "Unit tests" python -m pytest -q -rs
       - name: Build the examples
@@ -37,7 +37,7 @@ jobs:
     runs-on: ubuntu-latest
     container: python:3.8          # the oldest Python the kit supports
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: pip install pytest -e .
       - run: tools/ci_run.sh "Unit tests" python -m pytest -q -rs
       - name: The installed kit makes and builds a game
@@ -51,14 +51,14 @@ jobs:
     name: Browser test
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.11"
       - run: pip install playwright -e . "$KOLIBRI_GAMES"
       - run: python -m playwright install --with-deps chromium
       - run: tools/ci_run.sh "Browser test" python -m tests.e2e_browser --screenshots screenshots
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: screenshots
@@ -73,10 +73,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        game: [templates/saved, templates/scored, examples/number-hunt]
+        game: [templates/saved, templates/scored]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.11"
       - name: Install Kolibri, the kit and a browser
@@ -91,19 +91,28 @@ jobs:
             *) GAME="${{ matrix.game }}" ;;
           esac
           edugame kolibri-test "$GAME" --screenshots kolibri-screenshots
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: kolibri-screenshots-${{ strategy.job-index }}
           path: kolibri-screenshots
           if-no-files-found: ignore
 
+  # game.yml, the workflow every game's build.yml calls, on Number Hunt (with the kit from this
+  # commit): its Build and Real Kolibri jobs.
+  game-workflow:
+    name: Game workflow
+    uses: ./.github/workflows/game.yml
+    with:
+      folder: examples/number-hunt
+      kit: "."
+
   # The one check the "Protect main" ruleset requires in every togetherings repository: it passes only when
   # every job above passed, so tests can be added or renamed without changing the ruleset.
   checks-passed:
     name: Checks passed
     if: always()
-    needs: [unit, without-kolibri-games, browser, kolibri]
+    needs: [unit, without-kolibri-games, browser, kolibri, game-workflow]
     runs-on: ubuntu-latest
     steps:
       - name: Every check passed

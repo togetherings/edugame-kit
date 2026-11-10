@@ -23,7 +23,11 @@
   `tools/make_template_repo.py` and pushed by the `Template repository` workflow: change the starter here, not there.
 - Tests: `python -m pytest`; `python -m tests.e2e_browser` (Playwright; plays on the Kolibri Games
   games page too when kolibri-games is installed).
-- Bump `__version__` in `edugame/__init__.py` and add a CHANGELOG entry before a release. Releases
+- Games call the kit's `.github/workflows/game.yml` and `game-pages.yml` at a release (`@vX.Y.Z`), and
+  Dependabot moves them on (docs/UPDATING.md). Those workflows' `KIT_REF` and the starter's `@v...` must
+  equal `v` + `__version__` (a test checks): change all of them with `python tools/bump_version.py X.Y.Z`.
+  Each CHANGELOG release says under **What games need to do** what games must change themselves.
+- Bump the version (`tools/bump_version.py`) and add a CHANGELOG entry before a release. Releases
   are published by a person in GitHub's Releases page (tag `vX.Y.Z`); the Release workflow builds
   and attaches the files. Claude sessions can't create tags or releases.
 - Writing style for anything users see: plain words, sentence case, active voice.
