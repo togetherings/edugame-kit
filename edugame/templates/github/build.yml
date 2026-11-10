@@ -1,8 +1,9 @@
-# Checks the game and builds its zips with EduGame Kit, every time something is pushed.
-# Made by "edugame new --github". Change KIT_VERSION to update the kit.
+# Checks the game, builds its zips with EduGame Kit and plays it in a real Kolibri, every time
+# something is pushed. Made by "edugame new --github". Change KIT_VERSION to update the kit.
 #
 #   * Every push: the zips are in the run's "Artifacts" (Actions tab > the run > game-zips),
-#     so you can try them without installing anything.
+#     so you can try them without installing anything. Screenshots of the game in Kolibri are
+#     in "kolibri-screenshots".
 #   * Publish a release (Releases > Draft a new release, with a tag like v0.1.0 that matches
 #     "version" in edugame.json): the zips are attached to it.
 name: Build
@@ -22,8 +23,7 @@ env:
 
 jobs:
   build:
-    # The name the "Protect main" ruleset asks for: see the ruleset in docs/platforms/GITHUB_PAGES.md.
-    name: Checks passed
+    name: Build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -49,3 +49,41 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh release upload "$GITHUB_REF_NAME" dist/*.zip --clobber
+
+  # Adds the zip to a channel in a real Kolibri and plays it in Learn as a learner: the game
+  # must save through Kolibri's SCORM connection and carry on after the learner leaves.
+  # tests/kolibri_play.py says how to play it (see "edugame kolibri-test" in the kit's docs).
+  kolibri:
+    name: Real Kolibri
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install Kolibri, the kit and a browser
+        run: |
+          pip install kolibri playwright "edugame-kit @ git+https://github.com/togetherings/edugame-kit@${KIT_VERSION}"
+          python -m playwright install --with-deps chromium
+          echo "::notice title=Kolibri version::$(python -c 'import kolibri; print(kolibri.__version__)')"
+      - name: Play the game in Kolibri
+        run: edugame kolibri-test . --screenshots kolibri-screenshots
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: kolibri-screenshots
+          path: kolibri-screenshots
+          if-no-files-found: ignore
+
+  # The name the "Protect main" ruleset asks for (see docs/platforms/GITHUB_PAGES.md in the
+  # kit): it passes only when every job above passed. Add new jobs to "needs".
+  checks-passed:
+    name: Checks passed
+    if: always()
+    needs: [build, kolibri]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Every check passed
+        run: |
+          echo '${{ toJSON(needs) }}'
+          test "${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'skipped') }}" = "false"

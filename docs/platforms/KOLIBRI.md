@@ -40,3 +40,45 @@ coaches' challenges. Studio is the way to give games to learners.)
 `edugame preview` plays the game as a learning system, which is how Kolibri Learn runs it. To try
 the games page, unzip the built zip into a folder (say `games/my-game`) and run
 `kolibri-games-preview games` from kolibri-games.
+
+## Testing in a real Kolibri
+
+`edugame kolibri-test` plays the game in a real Kolibri, the way a learner gets it from a
+channel. It needs Kolibri and Playwright (on Linux or macOS; the starter's Build workflow runs it
+on GitHub for every push, in a job called **Real Kolibri**):
+
+```bash
+pip install kolibri playwright && python -m playwright install chromium
+edugame kolibri-test my-game
+```
+
+It sets up a throwaway Kolibri in a temporary folder (it never touches a Kolibri you use), adds
+the game's zip to a channel as an HTML5 app, signs in as a learner and opens the game in Learn.
+Then it checks that:
+
+1. the game opens, and the save helper finds Kolibri's SCORM connection;
+2. after the learner leaves, Kolibri kept the save: it fits SCORM 1.2's 4096 characters, the status
+   is `incomplete` or `passed`, no score was sent, and the resource counts as done if it should;
+3. when the learner comes back, the game gets back exactly that save, with no errors on the page.
+
+Screenshots go in `kolibri-screenshots/`.
+
+**Play steps.** Kolibri only keeps a save once the game makes one, so tell the test how to play:
+`tests/kolibri_play.py` in the game's folder (never put in the zip; the starters have one).
+
+```python
+def first_visit(game):          # play a little, so the game saves
+    game.click("#start")
+    game.data["level"] = game.text("#level")
+    game.expect_complete = True        # this visit finishes the game: check Kolibri counts it as done
+
+def came_back(game):            # check the game carried on where the learner left off
+    game.check(game.text("#level") == game.data["level"], "came back to the same level")
+```
+
+`game` has `click(selector)`, `fill(selector, text)`, `text(selector)`, `press(*keys)`,
+`hold(key, ms)`, `js(expression)`, `wait_for(expression)`, `check(condition, what)`, `shot(name)`,
+`page` and `frame` (Playwright, for anything else), and `data`, which is kept from the first visit
+to the second. For a game drawn on a canvas, click it first so it gets the keys
+(`game.click("canvas")`), then `press` and `hold` keys. `edugame kolibri-test my-game --play other.py`
+uses another file.

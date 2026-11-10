@@ -19,7 +19,7 @@ import threading
 
 from playwright.sync_api import sync_playwright
 
-from edugame import build, cli, project as projects
+from edugame import build, cli, kolibri_test, project as projects
 from tests.helpers import EXAMPLES, TEMPLATES
 
 NUMBER_HUNT = os.path.join(EXAMPLES, "number-hunt")
@@ -311,6 +311,32 @@ def check_kolibri_games(browser, shots):
         server.shutdown()
 
 
+def check_play_steps(browser, folder, shots):
+    """The play steps edugame kolibri-test uses (tests/kolibri_play.py) work, here in the
+    test page as a learning system, so they're right before a real Kolibri runs them."""
+    steps = kolibri_test.load_play(os.path.join(folder, kolibri_test.PLAY_FILE))
+    server, base = serve(folder)
+    page = browser.new_page(viewport={"width": 1200, "height": 860})
+    report = kolibri_test.Report()
+    game = kolibri_test.Game(page, report, shots, {})
+    try:
+        test_page(page, base, "scorm")
+        for visit, step in ((1, steps.first_visit), (2, steps.came_back)):
+            if visit == 2:
+                page.locator("#reload").click()
+                page.wait_for_timeout(500)
+            game.visit = visit
+            game.frame = kolibri_test.find_game(page, timeout=20)
+            assert game.frame is not None and game.frame != page.main_frame
+            assert kolibri_test.helper_state(game.frame)["platform"] == "scorm"
+            step(game)
+        assert not report.failures, "%s: %s" % (folder, report.failures)
+        assert game.expect_complete
+    finally:
+        page.close()
+        server.shutdown()
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--screenshots")
@@ -339,6 +365,8 @@ def main():
             test_page(phone, hunt_url, "scorm").locator("#btn-start").wait_for()
             assert phone.evaluate("document.documentElement.scrollWidth") <= 390
             phone.close()
+            for folder in (SAVED, os.path.join(TEMPLATES, "scored"), NUMBER_HUNT):
+                check_play_steps(browser, folder, None)
             check_pages_counting(browser, shots)
             check_kolibri_games(browser, shots)
             browser.close()

@@ -38,7 +38,8 @@
   <button type="button" id="reset">Delete the save</button>
 </header>
 <main>
-  <iframe id="game" title="The game"></iframe>
+  <!-- Sandboxed as Kolibri Learn does it: no forms, pop-ups or alerts. -->
+  <iframe id="game" title="The game" sandbox="allow-scripts allow-same-origin"></iframe>
   <aside>
     <h2>What's saved</h2>
     <p id="size"></p>

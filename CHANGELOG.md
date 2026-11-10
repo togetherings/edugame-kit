@@ -9,6 +9,18 @@
   `EduGame.save()` writes at once instead of after a Promise step. Saves after the session has ended
   are refused with a clear message. The test page now refuses saves after `LMSFinish`, like learning
   systems do.
+- **`edugame kolibri-test`** plays a game in a real Kolibri: it adds the zip to a channel in a
+  throwaway Kolibri, opens it in Learn as a learner, and checks the save reaches Kolibri, fits
+  SCORM 1.2, comes back on the next visit, and that the resource counts as done when it should.
+  The game's play steps go in `tests/kolibri_play.py` (never put in the zip). See
+  docs/platforms/KOLIBRI.md.
+- The starters come with play steps, and the starter's Build workflow has a **Real Kolibri** job
+  (so the jobs are now **Build**, **Real Kolibri** and **Checks passed**). The kit's own tests play
+  both starters and Number Hunt in a real Kolibri.
+- **Forms work in Kolibri.** Kolibri's sandboxed frame never submits forms, so in Learn the
+  Scored starter and Number Hunt couldn't take an answer (found by the new test). The helper now
+  sends forms' `submit` events itself, on every platform. The test page's frame is sandboxed as
+  Kolibri's is, so `edugame preview` shows problems like this.
 
 ## 0.2.0
 
