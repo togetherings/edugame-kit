@@ -125,7 +125,17 @@
   $("lang").addEventListener("change", start);
   $("as-kolibri").addEventListener("change", start);
   $("reload").addEventListener("click", start);
-  $("reset").addEventListener("click", function () {
+  // Closes the game first: as it closes it may save (on "leave"), which would undo the change.
+  function withGameClosed(change) {
+    var frame = $("game");
+    frame.addEventListener("load", function done() {
+      frame.removeEventListener("load", done);
+      change();
+      start();
+    });
+    frame.src = "about:blank";
+  }
+  $("reset").addEventListener("click", function () { withGameClosed(function () {
     cmi = {}; store();
     try {
       // The save, and the choices the helper keeps on this device (language, theme, options).
@@ -134,9 +144,8 @@
         if (k === "edugame:" + gameId || k.indexOf("edugame:" + gameId + ":") === 0) ls.removeItem(k);
       });
     } catch (e) { /* not reachable */ }
-    start();
-  });
-  $("damage").addEventListener("click", function () {
+  }); });
+  $("damage").addEventListener("click", function () { withGameClosed(function () {
     var text = cmi["cmi.suspend_data"] || '{"_v":1,"_save":"something"}';
     cmi["cmi.suspend_data"] = text.slice(0, Math.max(1, Math.floor(text.length / 2)));
     store();
@@ -145,8 +154,7 @@
       var local = ls.getItem(k) || '{"_v":1,"_save":"something"}';
       ls.setItem(k, local.slice(0, Math.max(1, Math.floor(local.length / 2))));
     } catch (e) { /* not reachable */ }
-    start();
-  });
+  }); });
   setInterval(show, 1000);
   start();
 })();

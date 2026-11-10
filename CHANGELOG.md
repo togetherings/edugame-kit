@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+### What games need to do
+
+- Nothing.
+
+### Changes
+
+- **Test page:** **Delete the save** and **Damage the save** close the game first. A game that saves as it
+  closes (on `leave`) used to write its save back straight after, so the save wasn't deleted or damaged.
+  (Found while trying Plenty Heaps' message for a damaged save.)
+
 ## 0.3.0
 
 ### What games need to do
