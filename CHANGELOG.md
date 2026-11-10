@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased
+
+### What games need to do
+
+- Nothing. A game that shows a scoreboard with `EduGame.scoreboard({board})` should check the answer's
+  `board` (below).
+
+### Changes
+
+- **Docs:** a scoreboard for each language, with `scoring.boards` (docs/SCORING.md), and
+  `EduGame.scoreboard({board})` answering with another board's scoreboard when the one asked for is
+  empty on the Kolibri Games games page (docs/HELPER.md). Sparkle's scoring in the tests' `EXISTING` and
+  in SCORING.md is now Sparkle 0.2.0's: a board for each language. (Found while moving Sparkle to the
+  kit and adding French.)
+
 ## 0.3.1
 
 ### What games need to do

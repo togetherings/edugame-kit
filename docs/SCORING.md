@@ -121,6 +121,23 @@ EduGame.ready().then(function (info) {
   `total`, after a count of levels (named by `count_label`). It ranks by that count, then by
   `rank_by`, unless `total.rank_by` says otherwise.
 
+### A scoreboard for each language
+
+Boards needn't be levels. A game played in several languages can make each language a board, so
+learners playing in French aren't ranked against learners playing in English (Sparkle does this):
+
+```json
+"boards": { "label": "board_label", "names": { "en": "board.en", "fr": "board.fr" } }
+```
+
+```js
+EduGame.start({ board: EduGame.language() });
+EduGame.finish(points);                       // kept for the language the round started in
+EduGame.on("languagechange", function () { /* show that language's results and scoreboard */ });
+```
+
+Leave out `total` unless a scoreboard across languages makes sense for the game.
+
 ## What the helper saves
 
 In SCORM `cmi.suspend_data` (Kolibri channels, Moodle) and in the browser, each level is a key
@@ -152,7 +169,7 @@ the grade.
 | Memory Match | One score, lower is better, time breaks ties, best round counts. |
 | Lessons In Typing | `acc` then `wpm`, both `desc`; a board per lesson and a total; rounds that miss the pass marks are `passed: false`. |
 | Studies In Geography | `acc` (`desc`) then `time` (`source: "time"`, `asc`); a board per map and mode, and a total. |
-| Sparkle | One score, higher is better, `tiebreak: "none"`, `counts: "total"`: each day's points add up. |
+| Sparkle | `score` (`desc`) and `plays`, `counts: "total"`: each day's points add up; a board for each language, and no total. |
 
 The full sections for the last three are in the kit's tests (`tests/test_project.py`,
 `EXISTING`).
