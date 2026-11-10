@@ -66,12 +66,21 @@ def _inject(html, snippet):
     return html[:at] + snippet + html[at:] if at >= 0 else snippet + html
 
 
+def _language_name(project, code):
+    """The language's name in itself ("Français"), from _language in lang/<code>.json."""
+    info = project.strings.get(code, {}).get("_language")
+    name = info.get("name") if isinstance(info, dict) else None
+    return name or code
+
+
 def _play_links(project, href):
-    """The Play button, and (with several languages) a link to play in each."""
+    """The Play button, and (with several languages) a link to play in each, named in that
+    language ("English · Français"). Not the game's title in each language: many games keep
+    one name in every language (Bobo na Mi, Plenty Heaps), and the links would all look alike."""
     out = '<a class="play" href="%s">Play</a>\n' % escape(href)
     if len(project.languages) > 1:
         out += '<p class="langs">Play in: ' + " · ".join(
-            '<a href="%s?lang=%s" lang="%s">%s</a>' % (escape(href), escape(code), escape(code), escape(project.text("title", code)))
+            '<a href="%s?lang=%s" lang="%s">%s</a>' % (escape(href), escape(code), escape(code), escape(_language_name(project, code)))
             for code in project.languages) + "</p>\n"
     return out
 

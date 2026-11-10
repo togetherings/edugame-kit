@@ -175,6 +175,23 @@ def test_a_site_lists_every_package(tmp_path):
     assert not os.path.exists(os.path.join(site, "play", "lesson-02", "lessons", "01"))
 
 
+def test_a_site_names_each_language_in_itself(tmp_path):
+    # A game keeping one title in every language (like Bobo na Mi) must still get links that
+    # tell the languages apart.
+    folder = copy_game("saved", tmp_path)
+    for code in ("en", "fr"):
+        with open(os.path.join(folder, "lang", code + ".json"), encoding="utf-8") as f:
+            words = json.load(f)
+        words["title"] = "Bobo na Mi"
+        write(folder, "lang/%s.json" % code, json.dumps(words, ensure_ascii=False))
+    site = str(tmp_path / "site")
+    pages.build_pages(projects.load(folder), site)
+    with open(os.path.join(site, "index.html"), encoding="utf-8") as f:
+        front = f.read()
+    assert '?lang=en" lang="en">English</a>' in front
+    assert '?lang=fr" lang="fr">Français</a>' in front
+
+
 def test_files_can_be_left_out(tmp_path):
     folder = copy_game("saved", tmp_path)
     write(folder, "tools/make.py", "print(1)")

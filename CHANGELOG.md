@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- **GitHub Pages:** the front page's "Play in" links name each language in itself ("English ·
+  Français"), not by the game's title in that language, which many games keep the same in every
+  language (they all read "Bobo na Mi"). (Found while putting Bobo na Mi on GitHub Pages.)
 - **Docs:** in Kolibri Learn, a save made as the page closes (`pagehide`, `EduGame.on("leave")`) never
   arrives: Kolibri stops listening before it closes the game's page. HELPER.md and KOLIBRI.md now say
   to save as the learner plays. (Found by the real-Kolibri test in Plenty Heaps.)
