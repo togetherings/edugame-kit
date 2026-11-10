@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- **SCORM:** the helper sets `cmi.core.exit` to `suspend`, so learning systems keep the save for next
+  time (Moodle and others may start a fresh attempt without it).
+- **Saving as the page closes:** a new event, `EduGame.on("leave", fn)`, runs when the page closes,
+  before the helper ends the SCORM session, so the game's last save arrives. Once the helper is ready,
+  `EduGame.save()` writes at once instead of after a Promise step. Saves after the session has ended
+  are refused with a clear message. The test page now refuses saves after `LMSFinish`, like learning
+  systems do.
 - **`edugame kolibri-test`** plays a game in a real Kolibri: it adds the zip to a channel in a
   throwaway Kolibri, opens it in Learn as a learner, and checks the save reaches Kolibri, fits
   SCORM 1.2, comes back on the next visit, and that the resource counts as done when it should.

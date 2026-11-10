@@ -84,15 +84,18 @@
     try { return $("game").contentWindow.localStorage.getItem("edugame:" + gameId); } catch (e) { return null; }
   }
 
+  // Like learning systems, it takes no saves after LMSFinish (until the game opens again).
+  var scormFinished = false;
   var scormApi = {
-    LMSInitialize: function () { note("LMSInitialize"); return "true"; },
-    LMSFinish: function () { note("LMSFinish"); return "true"; },
+    LMSInitialize: function () { scormFinished = false; note("LMSInitialize"); return "true"; },
+    LMSFinish: function () { scormFinished = true; note("LMSFinish"); return "true"; },
     LMSGetValue: function (name) {
       if (name === "cmi.core.student_name") return "Learner, Test";
       if (name === "cmi.core.lesson_status") return cmi[name] || "not attempted";
       return cmi[name] || "";
     },
     LMSSetValue: function (name, value) {
+      if (scormFinished) { note("refused: " + name + " after LMSFinish"); return "false"; }
       if (name === "cmi.suspend_data" && String(value).length > 4096) { note("refused: suspend_data over 4096"); return "false"; }
       cmi[name] = String(value); note("set " + name); store(); return "true";
     },

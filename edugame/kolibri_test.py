@@ -320,6 +320,7 @@ def check_record(rec, expect_complete, report):
     report.check(len(data) <= 4096, "the save fits SCORM 1.2 (%d of 4096 characters)" % len(data))
     report.check(rec.get("status") in ("incomplete", "passed"), "the status is incomplete or passed, never a score")
     report.check(not rec.get("score_raw"), "no score is sent to Kolibri (it reads a score as how much is done)")
+    report.check(rec.get("exit") == "suspend", "the session ends as suspended, so the save is kept (exit %r)" % rec.get("exit"))
     if expect_complete:
         report.check((rec.get("progress") or 0) >= 1, "the resource counts as done (progress %s)" % rec.get("progress"))
     if not data:

@@ -45,7 +45,7 @@ def test_the_shell_scripts_are_shipped_with_the_kit():
 
 
 def record(**cmi):
-    out = {"found": True, "progress": 1.0, "status": "passed", "score_raw": None,
+    out = {"found": True, "progress": 1.0, "status": "passed", "score_raw": None, "exit": "suspend",
            "suspend_data": json.dumps({"_v": 1, "_save": {"level": 3}})}
     out.update(cmi)
     return out
@@ -57,7 +57,7 @@ def test_what_kolibri_recorded_is_checked():
     assert not report.failures
 
     for bad in (dict(found=False), dict(suspend_data="x" * 4097), dict(status="completed"),
-                dict(score_raw="80"), dict(progress=0.0), dict(suspend_data="not json")):
+                dict(score_raw="80"), dict(exit=""), dict(progress=0.0), dict(suspend_data="not json")):
         report = kolibri_test.Report()
         kolibri_test.check_record(record(**bad), True, report)
         assert report.failures, bad
