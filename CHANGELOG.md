@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- **A save that can't be read is never written over.** When what the platform kept is damaged (not
+  JSON) or from a newer version of the game, the helper used to treat it as no save, and the game's
+  first save replaced it. Now `ready()` says `saveProblem` ("unreadable" or "newer"), nothing is saved
+  over it, and the helper asks the learner (Play without saving, or Start over), unless the game shows
+  its own message with `EduGame.on("saveproblem")` and `EduGame.startOver()`. The test page has a
+  **Damage the save** button, and `edugame kolibri-test` checks a damaged save survives in a real
+  Kolibri. (Found while looking at saving in Plenty Heaps.)
 - **Kolibri:** a game that isn't finished on the learner's first visit now shows as started. The
   helper sets `incomplete` when the game opens, but only if the status read "not attempted"; Kolibri
   answers "" for a status not set yet, so nothing was set. The test page's Kolibri box now answers

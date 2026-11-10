@@ -18,6 +18,11 @@
  *   EduGame.ready()             -> Promise of {save, best, results, plays, settings, language,
  *                                  platform, player, canExit, rules, challenge}
  *   EduGame.save(data)          -> Promise; keep the save small (at most MAX_SAVE characters as JSON)
+ *   EduGame.on("saveproblem", fn)
+ *                               what the platform kept can't be read ({kind: "unreadable" or "newer"};
+ *                               also ready()'s saveProblem). Nothing is saved over it (save() resolves
+ *                               false); without this handler the helper asks the learner.
+ *   EduGame.startOver()         -> Promise; after a save problem, saving starts again, from nothing
  *   EduGame.on("leave", fn)     the page is closing: make the last save here (Kolibri Learn drops it,
  *                               so save as the learner plays too: docs/HELPER.md)
  *   EduGame.complete()          the learner has finished the activity (sets SCORM status "passed")
@@ -130,11 +135,19 @@
     en: { "kit.options": "Options", "kit.options_title": "Options", "kit.appearance": "Appearance",
           "kit.theme_light": "Light", "kit.theme_dark": "Dark", "kit.theme_auto": "Auto",
           "kit.theme_auto_hint": "(follows this device's light or dark setting)", "kit.language": "Language",
-          "kit.apply": "Apply", "kit.back": "Back" },
+          "kit.apply": "Apply", "kit.back": "Back",
+          "kit.save_problem_title": "Your progress couldn't be loaded",
+          "kit.save_unreadable": "Your saved progress is damaged, so this game can't read it. It's kept as it is until you choose to start over.",
+          "kit.save_newer": "Your progress was saved by a newer version of this game. Play it on a device that has the newer version, or ask your teacher to update it.",
+          "kit.save_play_without": "Play without saving", "kit.save_start_over": "Start over" },
     fr: { "kit.options": "Options", "kit.options_title": "Options", "kit.appearance": "Apparence",
           "kit.theme_light": "Clair", "kit.theme_dark": "Sombre", "kit.theme_auto": "Auto",
           "kit.theme_auto_hint": "(suit le réglage clair ou sombre de cet appareil)", "kit.language": "Langue",
-          "kit.apply": "Appliquer", "kit.back": "Retour" },
+          "kit.apply": "Appliquer", "kit.back": "Retour",
+          "kit.save_problem_title": "Ta progression n'a pas pu être chargée",
+          "kit.save_unreadable": "Ta progression enregistrée est abîmée, alors ce jeu ne peut pas la lire. Elle est gardée telle quelle jusqu'à ce que tu choisisses de recommencer.",
+          "kit.save_newer": "Ta progression a été enregistrée par une version plus récente de ce jeu. Joue sur un appareil qui a la nouvelle version, ou demande à ton enseignant de le mettre à jour.",
+          "kit.save_play_without": "Jouer sans enregistrer", "kit.save_start_over": "Recommencer" },
     es: { "kit.options": "Opciones", "kit.options_title": "Opciones", "kit.appearance": "Apariencia",
           "kit.theme_light": "Claro", "kit.theme_dark": "Oscuro", "kit.theme_auto": "Automático",
           "kit.theme_auto_hint": "(sigue el ajuste claro u oscuro de este dispositivo)", "kit.language": "Idioma",
@@ -287,6 +300,62 @@
   }
 
   /** Change the language, and remember the learner's choice (in their save, so it can follow them). */
+  // ---------------------------------------------------------- save problem
+  // When what the platform kept can't be read (readRecord), the helper doesn't write over it:
+  // the game starts with no save, nothing is saved, and the learner decides. A game with an
+  // EduGame.on("saveproblem", fn) handler shows its own message; otherwise the helper shows one
+  // (Play without saving, or Start over). EduGame.startOver() lets saving begin again, from new.
+
+  var problem = null;        // {kind, text} from readRecord, until the learner starts over
+
+  /** Every write of the record goes through here. While there's a problem, nothing is written. */
+  function writeRecord() {
+    if (problem) return Promise.resolve(false);
+    return backend.write(record);
+  }
+
+  function problemError() {
+    return new Error(problem.kind === "newer"
+      ? "The saved progress is from a newer version of the game, so it isn't replaced."
+      : "The saved progress couldn't be read, so it isn't replaced until the learner starts over (EduGame.startOver()).");
+  }
+
+  function keepCopy(p) {
+    // A copy on this device, so a damaged save can still be looked at.
+    try { window.localStorage.setItem("edugame:" + config.id + ":unreadable", p.text); } catch (e) { /* storage blocked */ }
+  }
+
+  function startOver() {
+    return ready().then(function () {
+      if (!problem) return false;
+      problem = null;
+      record = { _v: VERSION, _lang: record._lang };
+      if (info) { info.saveProblem = null; info.save = null; }
+      return writeRecord().then(function () { return true; });
+    });
+  }
+
+  function showSaveProblem() {
+    addStyle();
+    var stay = make("button", { type: "button", className: "eg-primary", text: t("kit.save_play_without") });
+    var kids = [make("h2", { id: "eg-problem-title", text: t("kit.save_problem_title") }),
+                make("p", { text: t(problem.kind === "newer" ? "kit.save_newer" : "kit.save_unreadable") })];
+    var buttons = [stay];
+    var again = null;
+    if (problem.kind !== "newer") {
+      again = make("button", { type: "button", text: t("kit.save_start_over") });
+      buttons.push(again);
+    }
+    var box = make("div", { className: "eg-overlay eg-problem", role: "alertdialog", "aria-modal": "true",
+                            "aria-labelledby": "eg-problem-title" },
+                   [make("div", { className: "eg-card" }, kids.concat([make("div", { className: "eg-actions" }, buttons)]))]);
+    function close() { if (box.parentNode) box.parentNode.removeChild(box); }
+    stay.addEventListener("click", close);
+    if (again) again.addEventListener("click", function () { startOver().then(close, close); });
+    document.body.appendChild(box);
+    stay.focus();
+  }
+
   function setLanguage(code) {
     var found = matchLanguage(code);
     if (!found) return Promise.reject(new Error("This game isn't in " + code + "."));
@@ -296,7 +365,7 @@
     return ready().then(function () {
       info.language = found;
       record._lang = found;
-      return backend.write(record);
+      return writeRecord();
     });
   }
 
@@ -413,12 +482,23 @@
     return board;
   }
 
-  function parseRecord(text) {
-    try {
-      var data = typeof text === "string" ? JSON.parse(text) : text;
-      if (data && typeof data === "object" && !Array.isArray(data)) return data;
-    } catch (e) { /* not ours, or empty */ }
-    return { _v: VERSION };
+  /** What a platform kept, as {record, problem}. problem is null, or {kind, text} when there's
+   *  something there the helper can't use: "unreadable" (damaged or cut off: not JSON, or not an
+   *  object) or "newer" (from a newer kit). An object without "_v" (from before the kit) is used
+   *  as it is, as it always was. Then nothing is written over it until the learner chooses to
+   *  start over (see the "save problem" section). Nothing kept is not a problem: a new learner. */
+  function readRecord(text) {
+    if (text === null || text === undefined || text === "") return { record: { _v: VERSION }, problem: null };
+    var data = text;
+    if (typeof text === "string") {
+      try { data = JSON.parse(text); } catch (e) { data = null; }
+    }
+    var raw = typeof text === "string" ? text : JSON.stringify(text);
+    if (!data || typeof data !== "object" || Array.isArray(data)) {
+      return { record: { _v: VERSION }, problem: { kind: "unreadable", text: raw } };
+    }
+    if (typeof data._v === "number" && data._v > VERSION) return { record: { _v: VERSION }, problem: { kind: "newer", text: raw } };
+    return { record: data, problem: null };
   }
 
   function hasContent(rec) {
@@ -471,8 +551,10 @@
         // some systems (Moodle) start a fresh attempt next time, and the save is gone.
         set("cmi.core.exit", "suspend");
         commit();
+        var kept = readRecord(get("cmi.suspend_data"));
         return Promise.resolve({
-          record: parseRecord(get("cmi.suspend_data")),
+          record: kept.record,
+          problem: kept.problem,
           language: get("cmi.student_preference.language"),
           player: { name: get("cmi.core.student_name") }
         });
@@ -517,7 +599,8 @@
       open: function () {
         var text = null;
         try { text = window.localStorage.getItem(key); } catch (e) { /* storage blocked */ }
-        return Promise.resolve({ record: parseRecord(text), language: null, player: null });
+        var kept = readRecord(text);
+        return Promise.resolve({ record: kept.record, problem: kept.problem, language: null, player: null });
       },
       write: function (rec) {
         try { window.localStorage.setItem(key, JSON.stringify(rec)); return Promise.resolve(); } catch (e) {
@@ -553,14 +636,15 @@
           return KG.getState();
         }).then(function (state) {
           // The plugin keeps the scores itself; its summary says which results count.
-          var rec = state && typeof state === "object" ? state : { _v: VERSION };
+          var kept = readRecord(state && typeof state === "object" ? state : null);
+          var rec = kept.record;
           var summary = hello.summary || {};
           var boards = summary.boards || {};
           if (summary.counted) boards[MAIN] = summary.counted;
           Object.keys(boards).forEach(function (b) {
             if (boards[b] && boards[b].values) rec[b] = toList(boards[b].values);
           });
-          return { record: rec, language: hello.language, player: hello.player, settings: hello.settings,
+          return { record: rec, problem: kept.problem, language: hello.language, player: hello.player, settings: hello.settings,
                    rules: hello.rules, challenge: hello.challenge };
         });
       },
@@ -603,7 +687,9 @@
               var base = { record: { _v: VERSION }, language: user.language, player: { name: user.name } };
               if (err || !environment.objectId) return resolve(base);
               activity.getDatastoreObject().loadAsText(function (e2, metadata, text) {
-                base.record = parseRecord(e2 ? null : text);
+                var kept = readRecord(e2 ? null : text);
+                base.record = kept.record;
+                base.problem = kept.problem;
                 resolve(base);
               });
             });
@@ -690,7 +776,7 @@
   // the helper; anything else (like "timeup") comes from the platform.
 
   var handlers = {};
-  var OWN_EVENTS = ["languagechange", "themechange", "optionchange", "leave"];
+  var OWN_EVENTS = ["languagechange", "themechange", "optionchange", "leave", "saveproblem"];
 
   function emit(name, detail) {
     (handlers[name] || []).forEach(function (fn) { try { fn(detail); } catch (e) { console.error(e); } });
@@ -764,7 +850,7 @@
       if (o.keep === "learner") {
         record._options = record._options || {};
         record._options[key] = value;
-        if (backend) backend.write(record);
+        if (backend) writeRecord();
       } else {
         try { window.localStorage.setItem(optionKey(o), String(value)); } catch (e) { /* storage blocked */ }
       }
@@ -1021,6 +1107,8 @@
       });
     }).then(function (opened) {
       record = opened.record || { _v: VERSION };
+      problem = opened.problem || null;
+      if (problem) keepCopy(problem);
       var language = chooseLanguage(opened.language);
       applyLanguage(language);
       info = {
@@ -1033,11 +1121,20 @@
         player: opened.player || null,
         canExit: !!backend.exit,   // show a "back" button only when the platform has somewhere to go
         rules: opened.rules || null,
-        challenge: opened.challenge || null
+        challenge: opened.challenge || null,
+        saveProblem: problem ? problem.kind : null   // "unreadable" or "newer": see startOver()
       };
       updateInfo();
       watchForLateScorm();
       window.addEventListener("pagehide", leaving);
+      if (problem) {
+        // After the game's ready() handlers have run (they may add on("saveproblem")).
+        setTimeout(function () {
+          if (!problem) return;
+          if ((handlers.saveproblem || []).length) emit("saveproblem", { kind: problem.kind });
+          else if (document.body) showSaveProblem();
+        }, 0);
+      }
       return info;
     });
     return readyPromise;
@@ -1051,8 +1148,13 @@
       if (backend.name !== "kolibri-games" && text.length > MAX_SAVE) {
         throw new Error("The save is too big (" + text.length + " characters; at most " + MAX_SAVE + ").");
       }
+      if (problem) {
+        // Not an error the game must handle: it resolves false, and says why once.
+        if (!problem.warned) { problem.warned = true; console.warn("EduGame: " + problemError().message); }
+        return Promise.resolve(false);
+      }
       record._save = data;
-      return backend.write(record);
+      return writeRecord();
     }
     // Once the helper is ready, write at once rather than a moment later (after a Promise step):
     // a save made as the page closes then still reaches the platform before it finishes.
@@ -1127,7 +1229,7 @@
       if (kept) record[board] = toList(kept);
       var platform = backend.finish ? backend.finish(values, kept, passed) : Promise.resolve(null);
       // The plugin keeps scores itself; everywhere else they're kept in the record.
-      var saved = backend.name === "kolibri-games" ? Promise.resolve() : backend.write(record);
+      var saved = backend.name === "kolibri-games" ? Promise.resolve() : writeRecord();
       announce("finish", { board: board, passed: passed });
       return Promise.all([platform, saved]).then(function (out) {
         updateInfo();
@@ -1205,6 +1307,7 @@
     loadLanguage: loadLanguage,
     _content: contentLoaded,   // called by the build's content scripts
     exit: exit,
+    startOver: startOver,
     // for tests and the test page
     _compare: function (a, b) { return compare(a, b); },
     _keep: function (old, r, plays) { return keep(old, r, plays); },

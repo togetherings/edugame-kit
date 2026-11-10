@@ -126,6 +126,26 @@ ends the learning system's session (SCORM `LMSFinish`, after which systems refus
 - Phones may close a game in the background without `pagehide`: also save when the page is hidden
   (`visibilitychange`), as long as the page isn't already leaving.
 
+## When a save can't be read
+
+Sometimes what the platform kept can't be read: cut off on its way, damaged, or saved by a newer
+version of the game (a device or channel with an older copy). The helper then never writes over
+it, so the learner's progress isn't lost:
+
+- `ready()` gives `save: null` and `saveProblem: "unreadable"` or `"newer"`, so the game starts
+  afresh, and `EduGame.save()` resolves `false` without saving (nor do the language or options).
+- Without anything from the game, the helper shows the learner a message over the game: **Play
+  without saving**, or (for a damaged save) **Start over**, which starts saving again from nothing.
+  A save from a newer version can't be started over here: the learner plays it where it was made.
+- A game that shows its own message adds `EduGame.on("saveproblem", function (p) { ... })` before
+  `ready()` finishes (`p.kind` is `"unreadable"` or `"newer"`), and calls `EduGame.startOver()`
+  when the learner chooses to start over.
+- A copy of what couldn't be read stays in that browser (`edugame:<id>:unreadable`).
+- Try it in the test page with **Damage the save**; `edugame kolibri-test` checks it in a real Kolibri.
+
+A game with its own save format should do the same with it: check it when it loads (a checksum
+helps), and never save over one it couldn't read without asking the learner.
+
 ## Things to know
 
 - **Kolibri channels** sync each learner's saved data between Kolibri servers, so a learner can

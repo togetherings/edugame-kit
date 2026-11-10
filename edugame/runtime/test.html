@@ -36,6 +36,7 @@
   <label title="Kolibri reads a SCORM score as how much is done, so games mustn't send one there"><input type="checkbox" id="as-kolibri"> Kolibri</label>
   <button type="button" id="reload">Reload the game</button>
   <button type="button" id="reset">Delete the save</button>
+  <button type="button" id="damage" title="Cuts the save in half, as a damaged save would be">Damage the save</button>
 </header>
 <main>
   <!-- Sandboxed as Kolibri Learn does it: no forms, pop-ups or alerts. -->
@@ -132,6 +133,17 @@
       Object.keys(ls).forEach(function (k) {
         if (k === "edugame:" + gameId || k.indexOf("edugame:" + gameId + ":") === 0) ls.removeItem(k);
       });
+    } catch (e) { /* not reachable */ }
+    start();
+  });
+  $("damage").addEventListener("click", function () {
+    var text = cmi["cmi.suspend_data"] || '{"_v":1,"_save":"something"}';
+    cmi["cmi.suspend_data"] = text.slice(0, Math.max(1, Math.floor(text.length / 2)));
+    store();
+    try {
+      var ls = $("game").contentWindow.localStorage, k = "edugame:" + gameId;
+      var local = ls.getItem(k) || '{"_v":1,"_save":"something"}';
+      ls.setItem(k, local.slice(0, Math.max(1, Math.floor(local.length / 2))));
     } catch (e) { /* not reachable */ }
     start();
   });

@@ -64,7 +64,8 @@ Then it checks that:
 1. the game opens, and the save helper finds Kolibri's SCORM connection;
 2. after the learner leaves, Kolibri kept the save: it fits SCORM 1.2's 4096 characters, the status
    is `incomplete` or `passed`, no score was sent, and the resource counts as done if it should;
-3. when the learner comes back, the game gets back exactly that save, with no errors on the page.
+3. when the learner comes back, the game gets back exactly that save, with no errors on the page;
+4. with the save damaged (cut in half), the helper says it can't read it and nothing writes over it.
 
 Screenshots go in `kolibri-screenshots/`.
 
