@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+- **SCORM:** the helper sets `cmi.core.exit` to `suspend`, so learning systems keep the save for next
+  time (Moodle and others may start a fresh attempt without it).
+- **Saving as the page closes:** a new event, `EduGame.on("leave", fn)`, runs when the page closes,
+  before the helper ends the SCORM session, so the game's last save arrives. Once the helper is ready,
+  `EduGame.save()` writes at once instead of after a Promise step. Saves after the session has ended
+  are refused with a clear message. The test page now refuses saves after `LMSFinish`, like learning
+  systems do.
+
 ## 0.2.0
 
 - **Rulesets** for game repositories in `docs/rulesets/`: one for repositories with code (pull requests only, and

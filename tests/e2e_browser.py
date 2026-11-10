@@ -77,11 +77,16 @@ def check_scorm(page, base, shots):
     assert record["_v"] == 1 and record["main"][0] == guesses and record["main"][2] == 1, record
     assert saved["cmi.core.lesson_status"] == "passed", saved  # "passed": Kolibri ignores "completed"
     assert saved["cmi.core.score.raw"] == str(round((20 - guesses) / 19 * 100)), saved  # grade: 1 guess = 100%, 20 = 0%
+    assert saved["cmi.core.exit"] == "suspend", saved  # or some systems start afresh next time
     if shots:
         page.screenshot(path=os.path.join(shots, "1-scorm.png"), full_page=True)
+    # A save made as the page closes ("leave") reaches the system before LMSFinish ends the session.
+    page.evaluate("""() => document.getElementById('game').contentWindow.EduGame.on('leave', function () {
+        document.getElementById('game').contentWindow.EduGame.save({ left: 'just now' }); })""")
     # The learning system keeps the save, so the best shows next time.
     page.locator("#reload").click()
     page.frame_locator("#game").locator("#intro-rule:has-text('Your best: %d guesses.')" % guesses).wait_for()
+    assert json.loads(cmi(page)["cmi.suspend_data"])["_save"] == {"left": "just now"}, "the leave save arrived" 
     page.locator("#reset").click()
     page.frame_locator("#game").locator("#intro-rule").wait_for()
     assert "Your best" not in page.frame_locator("#game").locator("#intro-rule").inner_text()
