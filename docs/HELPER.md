@@ -62,12 +62,22 @@ EduGame.config.package;                          // {id, title, config} in a pac
 
 // Only do something on the Kolibri Games games page (safe to call anywhere):
 EduGame.move("guess", { value: 42 });   // coaches see every move
-EduGame.scoreboard({ board: "en-02" }); // Promise of {rows: [...], boards}, or null elsewhere
+EduGame.scoreboard({ board: "en-02" }); // Promise of {rows: [...], board, boards}, or null elsewhere
 EduGame.on("timeup", function () {});   // the coach's time limit ran out
 ```
 
 In HTML, `data-t="key"` fills an element's text, and `data-t-attr="aria-label:key"` fills an
 attribute. See [LANGUAGES.md](LANGUAGES.md).
+
+`EduGame.scoreboard({board})` answers with **another board's scoreboard when the board asked
+for has nobody on it yet** (Kolibri Games shows the first board with results). Check `board` in
+the answer before showing its rows:
+
+```js
+EduGame.scoreboard({ board: "fr" }).then(function (data) {
+  var rows = data && (!data.board || data.board === "fr") ? data.rows : [];
+});
+```
 
 ## Where it saves
 
