@@ -18,6 +18,7 @@
  *   EduGame.ready()             -> Promise of {save, best, results, plays, settings, language,
  *                                  platform, player, canExit, rules, challenge}
  *   EduGame.save(data)          -> Promise; keep the save small (at most MAX_SAVE characters as JSON)
+ *   EduGame.on("leave", fn)     the page is closing: make the last save here (it still arrives)
  *   EduGame.complete()          the learner has finished the activity (sets SCORM status "passed")
  *   EduGame.start({board})      Scored Games: a round begins (the helper times it); board = the level
  *   EduGame.finish(score, {board, passed})
@@ -462,14 +463,10 @@
       open: function () {
         try { api.LMSInitialize(""); } catch (e) { /* already started */ }
         if (get("cmi.core.lesson_status") === "not attempted") set("cmi.core.lesson_status", "incomplete");
+        // "suspend": the learner will come back, so keep suspend_data for next time. Without it,
+        // some systems (Moodle) start a fresh attempt next time, and the save is gone.
+        set("cmi.core.exit", "suspend");
         commit();
-        // Leaving the page ends the SCORM session, which saves for good in most systems.
-        window.addEventListener("pagehide", function () {
-          if (finished) return;
-          finished = true;
-          commit();
-          try { api.LMSFinish(""); } catch (e) { /* closed already */ }
-        });
         return Promise.resolve({
           record: parseRecord(get("cmi.suspend_data")),
           language: get("cmi.student_preference.language"),
@@ -477,9 +474,19 @@
         });
       },
       write: function (rec) {
+        if (finished) return Promise.reject(new Error("The learning system's session has ended (the page is closing): save in EduGame.on(\"leave\")."));
         var ok = set("cmi.suspend_data", JSON.stringify(rec));
         commit();
         return ok ? Promise.resolve() : Promise.reject(new Error("The learning system didn't take the save."));
+      },
+      // The page is closing (after the game's "leave" handlers): end the SCORM session, which
+      // saves for good in most systems.
+      leave: function () {
+        if (finished) return;
+        finished = true;
+        set("cmi.core.exit", "suspend");
+        commit();
+        try { api.LMSFinish(""); } catch (e) { /* closed already */ }
       },
       // "passed", never "completed": Kolibri ignores "completed".
       complete: function () { set("cmi.core.lesson_status", "passed"); commit(); },
@@ -658,12 +665,26 @@
     });
   }
 
+  // ---------------------------------------------------------- leaving
+  // When the page closes (pagehide), the helper first tells the game ("leave"), so its last
+  // EduGame.save() reaches the platform, and only then lets the platform finish (SCORM:
+  // LMSFinish, after which learning systems refuse saves). Saves made once the helper is
+  // ready are written at once (see save()), so a save in a "leave" handler arrives in time.
+
+  var left = false;
+  function leaving() {
+    if (left || !backend) return;
+    left = true;
+    emit("leave");
+    if (backend.leave) backend.leave();
+  }
+
   // -------------------------------------------------------------- events
-  // EduGame.on(name, fn): "languagechange", "themechange", "optionchange" from
+  // EduGame.on(name, fn): "languagechange", "themechange", "optionchange", "leave" from
   // the helper; anything else (like "timeup") comes from the platform.
 
   var handlers = {};
-  var OWN_EVENTS = ["languagechange", "themechange", "optionchange"];
+  var OWN_EVENTS = ["languagechange", "themechange", "optionchange", "leave"];
 
   function emit(name, detail) {
     (handlers[name] || []).forEach(function (fn) { try { fn(detail); } catch (e) { console.error(e); } });
@@ -1010,6 +1031,7 @@
       };
       updateInfo();
       watchForLateScorm();
+      window.addEventListener("pagehide", leaving);
       return info;
     });
     return readyPromise;
@@ -1017,7 +1039,7 @@
 
   function save(data) {
     var text = JSON.stringify(data === undefined ? null : data);
-    return ready().then(function () {
+    function write() {
       // The plugin keeps up to 64 KB; everywhere else the SCORM 1.2 limit applies, so games
       // behave the same on every platform.
       if (backend.name !== "kolibri-games" && text.length > MAX_SAVE) {
@@ -1025,7 +1047,13 @@
       }
       record._save = data;
       return backend.write(record);
-    });
+    }
+    // Once the helper is ready, write at once rather than a moment later (after a Promise step):
+    // a save made as the page closes then still reaches the platform before it finishes.
+    if (info) {
+      try { return write(); } catch (e) { return Promise.reject(e); }
+    }
+    return ready().then(write);
   }
 
   /** info.results (every board), and best, bestSeconds and plays (the main board), for games with one score. */

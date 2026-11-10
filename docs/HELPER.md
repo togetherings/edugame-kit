@@ -21,6 +21,9 @@ EduGame.ready().then(function (info) {
 
 EduGame.save({ level: 3, stars: [1, 1, 0] });  // a Promise; call it after each step
 EduGame.complete();                            // the learner has finished the activity
+EduGame.on("leave", function () {              // the page is closing: the last save goes here
+  EduGame.save(currentProgress());
+});
 
 // Scored Games (see SCORING.md)
 EduGame.start();                       // a round begins: the helper starts timing it
@@ -96,9 +99,24 @@ Outside Kolibri Games, the helper keeps one JSON object:
 Kolibri Games reads these to show **scoreboards for Scored Games in Kolibri channels**, and
 skips keys that start with `_`. In SCORM systems, the helper also sets `cmi.core.lesson_status` to
 `incomplete` when the game opens and `passed` after `complete()` or a passed round (never
-`completed`, which Kolibri ignores). **It never sends Kolibri a score**: Kolibri reads a SCORM score
+`completed`, which Kolibri ignores), and `cmi.core.exit` to `suspend`, so systems keep the save for
+next time (without it, Moodle and others may start a fresh attempt). **It never sends Kolibri a score**: Kolibri reads a SCORM score
 as how much of a resource is done. Other learning systems get a grade when `scoring.grade` says
 how (see [SCORING.md](SCORING.md)).
+
+## Saving as the page closes
+
+When the learner leaves (closes the page, goes back in Kolibri, follows a link), the browser fires
+`pagehide`. The helper then calls the game's `EduGame.on("leave", ...)` handlers, and only after them
+ends the learning system's session (SCORM `LMSFinish`, after which systems refuse saves). So:
+
+- **Make the last save in `EduGame.on("leave", ...)`.** Once the helper is ready, `EduGame.save()`
+  writes at once, so this save arrives.
+- A save in your own `pagehide` listener arrives only if it runs before the helper's, so prefer
+  `leave`. A save after that (for example in a `visibilitychange` that follows `pagehide` when a
+  visible page closes) is refused, and its Promise says so.
+- Phones may close a game in the background without `pagehide`: also save when the page is hidden
+  (`visibilitychange`), as long as the page isn't already leaving.
 
 ## Things to know
 
