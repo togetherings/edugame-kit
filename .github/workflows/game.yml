@@ -39,7 +39,7 @@ on:
 env:
   # This release of the kit. Always v + __version__ in edugame/__init__.py (a test checks), so a
   # game calling game.yml@vX.Y.Z builds with kit X.Y.Z. tools/bump_version.py changes it.
-  KIT_REF: v0.3.0
+  KIT_REF: v0.3.1
   KIT: ${{ inputs.kit }}
 
 jobs:
