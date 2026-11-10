@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- **Docs:** in Kolibri Learn, a save made as the page closes (`pagehide`, `EduGame.on("leave")`) never
+  arrives: Kolibri stops listening before it closes the game's page. HELPER.md and KOLIBRI.md now say
+  to save as the learner plays. (Found by the real-Kolibri test in Plenty Heaps.)
 - **SCORM:** the helper sets `cmi.core.exit` to `suspend`, so learning systems keep the save for next
   time (Moodle and others may start a fresh attempt without it).
 - **Saving as the page closes:** a new event, `EduGame.on("leave", fn)`, runs when the page closes,
