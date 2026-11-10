@@ -177,7 +177,7 @@ def test_github_pages_site_counts_visits_but_the_zips_never_do(tmp_path):
         assert 'data-goatcounter="https://togetherings.goatcounter.com/count"' in page
         assert page.index("goatcounter") < page.lower().index("</head>")
     assert "edugame:finish" in game and "https://github.com/togetherings/edugame-kit/releases/latest" in front
-    assert "Chasse au nombre" in front and os.path.exists(os.path.join(site, ".nojekyll"))
+    assert 'lang="fr">Français</a>' in front and os.path.exists(os.path.join(site, ".nojekyll"))
     assert not os.path.exists(os.path.join(site, "play", "imsmanifest.xml"))
     # Built again without a code: no counting at all.
     assert pages.build_pages(p, site) is None
