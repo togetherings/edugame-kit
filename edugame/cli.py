@@ -61,13 +61,15 @@ def cmd_new(args):
         os.makedirs(workflows, exist_ok=True)
         for name in ("pages.yml", "build.yml"):
             shutil.copy(os.path.join(TEMPLATES, "github", name), os.path.join(workflows, name))
+        shutil.copy(os.path.join(TEMPLATES, "github", "dependabot.yml"), os.path.join(args.folder, ".github", "dependabot.yml"))
     print("Made %s, a %s Game. Next:" % (args.folder, "Saved" if args.type == "saved" else "Scored"))
     print("  edugame preview %s    try it" % args.folder)
     print("  edugame build %s      make the zip" % args.folder)
     print("Change the id in edugame.json to one of your own before you share the game.")
     if args.github:
         print("On GitHub: make the folder a repository and push it. The Build workflow makes the zips (and attaches")
-        print("them to each release); for the web page, choose GitHub Actions in Settings > Pages.")
+        print("them to each release); for the web page, choose GitHub Actions in Settings > Pages. Dependabot opens")
+        print("a pull request when there's a new kit release.")
 
 
 def cmd_check(args):

@@ -1,20 +1,15 @@
 # Keeps github.com/togetherings/edugame-template up to date with the kit's starter game.
-# Runs when the starter changes on main: makes the files with tools/make_template_repo.py and
-# pushes them to the template repository (only if something changed).
+# Runs when a kit release is published (the starter's workflows name that release, so the
+# template must not change before it exists): makes the files with tools/make_template_repo.py
+# from the release and pushes them to the template repository (only if something changed).
 #
 # Setup (once): a deploy key with write access on edugame-template (its Settings > Deploy keys),
 # and the private half here as the secret TEMPLATE_DEPLOY_KEY. Without the secret this does nothing.
 name: Template repository
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "edugame/templates/**"
-      - "edugame/cli.py"
-      - "tools/make_template_repo.py"
-      - "tools/template-repo/**"
-      - ".github/workflows/template.yml"
+  release:
+    types: [published]
   workflow_dispatch:
 
 permissions:
@@ -32,15 +27,15 @@ jobs:
       - name: Skip without the deploy key
         if: env.HAS_KEY != 'true'
         run: echo "::notice::No TEMPLATE_DEPLOY_KEY secret, so the template repository isn't updated."
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         if: env.HAS_KEY == 'true'
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         if: env.HAS_KEY == 'true'
         with:
           python-version: "3.11"
       - name: Check out the template repository
         if: env.HAS_KEY == 'true'
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: togetherings/edugame-template
           ssh-key: ${{ secrets.TEMPLATE_DEPLOY_KEY }}

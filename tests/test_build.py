@@ -196,10 +196,10 @@ def test_new_game_with_a_github_pages_workflow(tmp_path):
     folder = str(tmp_path / "puzzle")
     cli.main(["new", folder, "--github"])
     workflow = open(os.path.join(folder, ".github", "workflows", "pages.yml")).read()
-    assert "edugame pages . -o _site" in workflow and "vars.GOATCOUNTER_CODE" in workflow
+    assert "edugame-kit/.github/workflows/game-pages.yml@v" in workflow and "pages: write" in workflow
     assert not any(n.startswith(".github") for n in projects.load(folder).files())
     build_workflow = open(os.path.join(folder, ".github", "workflows", "build.yml")).read()
-    assert "edugame check ." in build_workflow and "gh release upload" in build_workflow
+    assert "edugame-kit/.github/workflows/game.yml@v" in build_workflow and "contents: write" in build_workflow
 
 
 def test_the_template_repository_is_a_working_game(tmp_path):

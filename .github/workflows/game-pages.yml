@@ -1,0 +1,54 @@
+# The GitHub Pages workflow of every game made with EduGame Kit: a front page, and the game to
+# play in the browser. A game's own .github/workflows/pages.yml calls it, like game.yml:
+#
+#   jobs:
+#     pages:
+#       uses: togetherings/edugame-kit/.github/workflows/game-pages.yml@vX.Y.Z
+#
+# Dependabot moves the "@vX.Y.Z" on with each kit release. See docs/platforms/GITHUB_PAGES.md.
+name: EduGame Kit game pages
+
+on:
+  workflow_call:
+    inputs:
+      folder:
+        description: The game's folder in the repository
+        type: string
+        default: "."
+      kit:
+        description: What to pip install instead of this release of the kit
+        type: string
+        default: ""
+
+env:
+  KIT_REF: v0.3.0          # v + __version__ in edugame/__init__.py (a test checks)
+  KIT: ${{ inputs.kit }}
+
+jobs:
+  build:
+    name: Build the site
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.11"
+      - run: pip install "${KIT:-edugame-kit @ git+https://github.com/togetherings/edugame-kit@$KIT_REF}"
+      - name: Build the site
+        env:
+          GOATCOUNTER_CODE: ${{ vars.GOATCOUNTER_CODE }}
+        run: edugame pages "${{ inputs.folder }}" -o _site --repo "${{ github.repository }}"
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: _site
+
+  deploy:
+    name: Publish
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5

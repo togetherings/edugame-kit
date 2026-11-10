@@ -1,0 +1,101 @@
+# The Build workflow of every game made with EduGame Kit, kept here so games get its fixes by
+# changing one line. A game's own .github/workflows/build.yml calls it:
+#
+#   jobs:
+#     kit:
+#       uses: togetherings/edugame-kit/.github/workflows/game.yml@vX.Y.Z
+#
+# Each game's Dependabot (.github/dependabot.yml) opens a pull request in the game when a new
+# kit release comes out, moving that "@vX.Y.Z" on. The game's checks run on that pull request,
+# so it shows whether the new kit works for the game before anyone merges it.
+#
+# Jobs:
+#   * Build: the game's own tests (the "tests" input), edugame check, edugame build. The zips
+#     are in the run's Artifacts (game-zips); on a published release they're attached to it.
+#   * Real Kolibri: edugame kolibri-test, with the game's tests/kolibri_play.py. Screenshots
+#     are in the run's Artifacts (kolibri-screenshots).
+name: EduGame Kit game
+
+on:
+  workflow_call:
+    inputs:
+      folder:
+        description: The game's folder in the repository
+        type: string
+        default: "."
+      tests:
+        description: A command for the game's own tests, run before the kit's checks (like "node tests/run-tests.js")
+        type: string
+        default: ""
+      kolibri:
+        description: Play the game in a real Kolibri
+        type: boolean
+        default: true
+      kit:
+        description: What to pip install instead of this release of the kit (the kit's own tests use ".")
+        type: string
+        default: ""
+
+env:
+  # This release of the kit. Always v + __version__ in edugame/__init__.py (a test checks), so a
+  # game calling game.yml@vX.Y.Z builds with kit X.Y.Z. tools/bump_version.py changes it.
+  KIT_REF: v0.3.0
+  KIT: ${{ inputs.kit }}
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.11"
+      - name: Install EduGame Kit
+        run: pip install "${KIT:-edugame-kit @ git+https://github.com/togetherings/edugame-kit@$KIT_REF}" && edugame --version
+      - name: The game's own tests
+        if: inputs.tests != ''
+        run: ${{ inputs.tests }}
+      - name: Check the game (missing words, mistakes in edugame.json)
+        run: edugame check "${{ inputs.folder }}"
+      - name: Build the zips
+        run: edugame build "${{ inputs.folder }}" -o dist && ls -l dist
+      - uses: actions/upload-artifact@v7
+        with:
+          name: game-zips
+          path: dist/*.zip
+      - name: The tag must match the version in edugame.json
+        if: github.event_name == 'release'
+        run: |
+          VERSION="$(python -c 'import json, sys; print(json.load(open(sys.argv[1]))["version"])' "${{ inputs.folder }}/edugame.json")"
+          test "v$VERSION" = "$GITHUB_REF_NAME" || { echo "::error::The tag $GITHUB_REF_NAME doesn't match version $VERSION in edugame.json"; exit 1; }
+      - name: Attach the zips to the release
+        if: github.event_name == 'release'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "$GITHUB_REF_NAME" dist/*.zip --clobber
+
+  # Adds the zip to a channel in a real Kolibri and plays it in Learn as a learner: the game
+  # must save through Kolibri's SCORM connection and carry on after the learner leaves.
+  kolibri:
+    name: Real Kolibri
+    if: inputs.kolibri
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.11"
+      - name: Install Kolibri, EduGame Kit and a browser
+        run: |
+          pip install kolibri playwright "${KIT:-edugame-kit @ git+https://github.com/togetherings/edugame-kit@$KIT_REF}"
+          python -m playwright install --with-deps chromium
+          echo "::notice title=Kolibri version::$(python -c 'import kolibri; print(kolibri.__version__)')"
+      - name: Play the game in Kolibri
+        run: edugame kolibri-test "${{ inputs.folder }}" --screenshots kolibri-screenshots
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: kolibri-screenshots
+          path: kolibri-screenshots
+          if-no-files-found: ignore
