@@ -23,7 +23,7 @@ permissions:
 jobs:
   kit:
     name: Kit
-    uses: togetherings/edugame-kit/.github/workflows/game.yml@v0.3.0
+    uses: togetherings/edugame-kit/.github/workflows/game.yml@v0.3.1
     # with:
     #   tests: node tests/run-tests.js     # the game's own tests, if it has any
     #   kolibri: false                     # to skip playing it in a real Kolibri

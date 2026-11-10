@@ -21,7 +21,7 @@ on:
         default: ""
 
 env:
-  KIT_REF: v0.3.0          # v + __version__ in edugame/__init__.py (a test checks)
+  KIT_REF: v0.3.1          # v + __version__ in edugame/__init__.py (a test checks)
   KIT: ${{ inputs.kit }}
 
 jobs:
