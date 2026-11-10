@@ -247,6 +247,12 @@ def make_preview_server(folder, port, package=None, languages=None):
     return _QuietServer(("127.0.0.1", port), handler)
 
 
+def cmd_kolibri_test(args):
+    from . import kolibri_test
+    sys.exit(kolibri_test.run(args.folder, play_file=args.play, port=args.port,
+                              shots=args.screenshots, keep=args.keep))
+
+
 def cmd_preview(args):
     _load(args.folder)
     try:
@@ -312,6 +318,14 @@ def main(argv=None):
     p.add_argument("folder")
     p.add_argument("language")
     p.set_defaults(func=cmd_translate)
+
+    p = sub.add_parser("kolibri-test", help="play the game in a real Kolibri, as a learner (needs kolibri and playwright)")
+    p.add_argument("folder")
+    p.add_argument("--play", help="the game's play steps (default: tests/kolibri_play.py in the folder)")
+    p.add_argument("--port", type=int, default=8080)
+    p.add_argument("--screenshots", default="kolibri-screenshots", help="folder for screenshots ('' for none)")
+    p.add_argument("--keep", action="store_true", help="keep the throwaway Kolibri's files, to look at afterwards")
+    p.set_defaults(func=cmd_kolibri_test)
 
     args = parser.parse_args(argv)
     args.func(args)

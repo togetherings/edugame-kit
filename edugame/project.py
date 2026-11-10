@@ -68,6 +68,8 @@ REQUIRED_STRINGS = ("title",)
 GENERATED = ("edugame.js", "edugame-config.js", "kolibri-game.json", "imsmanifest.xml", "rachel-index.php")
 #: Left out of builds.
 SKIP_NAMES = {".git", ".DS_Store", "Thumbs.db", "__pycache__", "node_modules", "dist", ".github"}
+#: A game's play steps for `edugame kolibri-test`; never part of the game.
+NOT_SHIPPED = ("tests/kolibri_play.py",)
 #: SCORM 1.2 suspend_data is at most 4096 characters; see runtime/edugame.js.
 MAX_SAVE = 3900
 #: Plural forms a word can have (Unicode CLDR); "other" is always needed.
@@ -211,7 +213,7 @@ class Project(object):
                     continue
                 rel = os.path.relpath(os.path.join(root, name), self.folder).replace(os.sep, "/")
                 # lang/ goes into edugame-config.js, so the files themselves aren't needed.
-                if rel in GENERATED or rel == "edugame.json" or rel.startswith("lang/"):
+                if rel in GENERATED or rel in NOT_SHIPPED or rel == "edugame.json" or rel.startswith("lang/"):
                     continue
                 # Files that belong to packages are only in the packages that list them.
                 only = self.data.get("package_files", [])

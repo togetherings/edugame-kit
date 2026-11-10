@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+- **`edugame kolibri-test`** plays a game in a real Kolibri: it adds the zip to a channel in a
+  throwaway Kolibri, opens it in Learn as a learner, and checks the save reaches Kolibri, fits
+  SCORM 1.2, comes back on the next visit, and that the resource counts as done when it should.
+  The game's play steps go in `tests/kolibri_play.py` (never put in the zip). See
+  docs/platforms/KOLIBRI.md.
+- The starters come with play steps, and the starter's Build workflow has a **Real Kolibri** job
+  (so the jobs are now **Build**, **Real Kolibri** and **Checks passed**). The kit's own tests play
+  both starters and Number Hunt in a real Kolibri.
+
 ## 0.2.0
 
 - **Rulesets** for game repositories in `docs/rulesets/`: one for repositories with code (pull requests only, and

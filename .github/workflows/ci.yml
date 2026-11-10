@@ -65,12 +65,45 @@ jobs:
           path: screenshots
           if-no-files-found: ignore
 
+  # Plays the starter games and an example in a real Kolibri (edugame kolibri-test), as a
+  # game made with the kit does in its own Build workflow.
+  kolibri:
+    name: Real Kolibri (${{ matrix.game }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        game: [templates/saved, templates/scored, examples/number-hunt]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install Kolibri, the kit and a browser
+        run: |
+          pip install kolibri playwright -e .
+          python -m playwright install --with-deps chromium
+          echo "::notice title=Kolibri version::$(python -c 'import kolibri; print(kolibri.__version__)')"
+      - name: Play the game in Kolibri
+        run: |
+          case "${{ matrix.game }}" in
+            templates/*) edugame new game --type "$(basename ${{ matrix.game }})" --github; GAME=game ;;
+            *) GAME="${{ matrix.game }}" ;;
+          esac
+          edugame kolibri-test "$GAME" --screenshots kolibri-screenshots
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: kolibri-screenshots-${{ strategy.job-index }}
+          path: kolibri-screenshots
+          if-no-files-found: ignore
+
   # The one check the "Protect main" ruleset requires in every togetherings repository: it passes only when
   # every job above passed, so tests can be added or renamed without changing the ruleset.
   checks-passed:
     name: Checks passed
     if: always()
-    needs: [unit, without-kolibri-games, browser]
+    needs: [unit, without-kolibri-games, browser, kolibri]
     runs-on: ubuntu-latest
     steps:
       - name: Every check passed

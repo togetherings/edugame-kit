@@ -35,7 +35,7 @@ packages = ["edugame"]
 version = { attr = "edugame.__version__" }
 
 [tool.setuptools.package-data]
-edugame = ["runtime/*", "templates/**/*"]
+edugame = ["runtime/*", "kolibri/*", "templates/**/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
