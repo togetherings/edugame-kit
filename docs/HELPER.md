@@ -106,12 +106,20 @@ how (see [SCORING.md](SCORING.md)).
 
 ## Saving as the page closes
 
+**Save as the learner plays: after every step that matters, or every few seconds while something
+changes.** Don't count on a last save as the page closes. In Kolibri Learn it never arrives when the
+learner goes back to the channel or to another resource: Kolibri stops listening and sends what it
+has before it closes the game's page, so anything saved while the page closes is lost. (Kolibri also
+waits about 2 seconds after a save before sending it, and sends it straight away when the learner
+leaves, so a save made a moment before leaving is fine.)
+
+The last save still helps elsewhere: when the learner closes the tab, and in other learning systems.
 When the learner leaves (closes the page, goes back in Kolibri, follows a link), the browser fires
 `pagehide`. The helper then calls the game's `EduGame.on("leave", ...)` handlers, and only after them
 ends the learning system's session (SCORM `LMSFinish`, after which systems refuse saves). So:
 
 - **Make the last save in `EduGame.on("leave", ...)`.** Once the helper is ready, `EduGame.save()`
-  writes at once, so this save arrives.
+  writes at once, so this save reaches the learning system (but not Kolibri Learn: see above).
 - A save in your own `pagehide` listener arrives only if it runs before the helper's, so prefer
   `leave`. A save after that (for example in a `visibilitychange` that follows `pagehide` when a
   visible page closes) is refused, and its Promise says so.

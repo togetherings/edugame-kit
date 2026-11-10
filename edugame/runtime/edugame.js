@@ -18,7 +18,8 @@
  *   EduGame.ready()             -> Promise of {save, best, results, plays, settings, language,
  *                                  platform, player, canExit, rules, challenge}
  *   EduGame.save(data)          -> Promise; keep the save small (at most MAX_SAVE characters as JSON)
- *   EduGame.on("leave", fn)     the page is closing: make the last save here (it still arrives)
+ *   EduGame.on("leave", fn)     the page is closing: make the last save here (Kolibri Learn drops it,
+ *                               so save as the learner plays too: docs/HELPER.md)
  *   EduGame.complete()          the learner has finished the activity (sets SCORM status "passed")
  *   EduGame.start({board})      Scored Games: a round begins (the helper times it); board = the level
  *   EduGame.finish(score, {board, passed})
@@ -670,6 +671,8 @@
   // EduGame.save() reaches the platform, and only then lets the platform finish (SCORM:
   // LMSFinish, after which learning systems refuse saves). Saves made once the helper is
   // ready are written at once (see save()), so a save in a "leave" handler arrives in time.
+  // Except in Kolibri Learn: it stops listening before it closes the game's page, so games
+  // must save as the learner plays, not only here.
 
   var left = false;
   function leaving() {

@@ -17,6 +17,11 @@ Kolibri account. Kolibri syncs it between servers, so learners can carry on from
 that syncs with this one. When the game calls `EduGame.complete()`, or a Scored Game finishes a
 passed round, Kolibri shows the resource as done.
 
+**Save as the learner plays.** When a learner goes back to the channel, Kolibri sends what it has
+and stops listening before it closes the game's page, so a save made as the page closes never
+arrives. Save after every step that matters (the starters do), or every few seconds while something
+changes. See "Saving as the page closes" in [HELPER.md](../HELPER.md).
+
 **Scoreboards:** with [Kolibri Games](https://github.com/togetherings/kolibri-games) 0.2 or later
 on the device, Scored Games in channels appear on its games page under **Scored Games in Learn**,
 with scoreboards made from the scores they save: one for each level or lesson, and one for the
@@ -62,6 +67,10 @@ Then it checks that:
 3. when the learner comes back, the game gets back exactly that save, with no errors on the page.
 
 Screenshots go in `kolibri-screenshots/`.
+
+The test leaves straight after the first visit's play steps, the way a learner goes back to the
+channel. Kolibri drops a save made as the learner leaves (see "Saving as the page closes" in
+[HELPER.md](../HELPER.md)), so if the game only saves then, the second visit shows it.
 
 **Play steps.** Kolibri only keeps a save once the game makes one, so tell the test how to play:
 `tests/kolibri_play.py` in the game's folder (never put in the zip; the starters have one).
