@@ -1177,6 +1177,47 @@
     _percent: function (values) { return percent(values); }
   };
 
+  // ---------------------------------------------------------------- forms
+  // Kolibri runs games in a sandboxed frame without "allow-forms", where the browser never
+  // submits a form: Enter and submit buttons do nothing, and "submit" listeners never run. So
+  // the helper sends forms' submit events itself, on every platform, the same way. (The page
+  // never leaves: a game handles "submit" and calls preventDefault, as it would anyway.)
+  var TYPING = /^(text|search|url|tel|email|password|number|date|datetime-local|month|week|time)$/;
+
+  function up(el, test) {
+    for (; el && el.nodeType === 1; el = el.parentNode) if (test(el)) return el;
+    return null;
+  }
+
+  function sendSubmit(form, e, noValidate) {
+    e.preventDefault();
+    if (!noValidate && !form.noValidate && form.checkValidity && !form.checkValidity()) {
+      if (form.reportValidity) form.reportValidity();
+      return;
+    }
+    var ev;
+    try { ev = new Event("submit", { bubbles: true, cancelable: true }); } catch (x) {
+      ev = document.createEvent("Event");
+      ev.initEvent("submit", true, true);
+    }
+    form.dispatchEvent(ev);
+  }
+
+  document.addEventListener("click", function (e) {
+    var b = up(e.target, function (el) { return el.tagName === "BUTTON" || el.tagName === "INPUT"; });
+    if (!b || !b.form || b.disabled) return;
+    var type = (b.getAttribute("type") || (b.tagName === "BUTTON" ? "submit" : "text")).toLowerCase();
+    if (type === "submit" || type === "image") sendSubmit(b.form, e, b.hasAttribute("formnovalidate"));
+  }, true);
+
+  document.addEventListener("keydown", function (e) {
+    if ((e.key !== "Enter" && e.keyCode !== 13) || e.isComposing || e.defaultPrevented) return;
+    var input = e.target;
+    if (!input || input.tagName !== "INPUT" || !input.form) return;
+    if (!TYPING.test((input.getAttribute("type") || "text").toLowerCase())) return;
+    sendSubmit(input.form, e, false);
+  }, false);
+
   // The header with the Options button, as soon as the page is there.
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", addHeader);
   else addHeader();

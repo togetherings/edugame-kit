@@ -106,6 +106,10 @@ how (see [SCORING.md](SCORING.md)).
   carry on from another device that syncs.
 - **Moodle** keeps saves per attempt. With "Force new attempt" turned on, every attempt starts
   afresh. See [platforms/MOODLE.md](platforms/MOODLE.md).
+- **Forms:** Kolibri runs games in a sandboxed frame where the browser never submits a form, so
+  Enter and submit buttons would do nothing. The helper sends a form's `submit` event itself, on
+  every platform: handle `submit` and call `preventDefault()`, as usual, and it works everywhere.
+  Kolibri's frame also blocks pop-ups and `alert()`; the test page is sandboxed the same way.
 - **The browser** keeps saves on that device only, and private browsing may drop them.
 - Scores come from the game in the learner's browser, so they can be changed by someone who
   knows how. These are learning games, not tests.
