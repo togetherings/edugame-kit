@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+### What games need to do
+
+- Nothing.
+
+### Changes
+
+- **Docs:** Chromium warns about the test page's sandboxed frame on every page; browser tests that
+  fail on console warnings should skip that one (docs/HELPER.md). (Found running LIT's browser test
+  through `browser-tests`.)
+
 ## 0.3.2
 
 ### What games need to do
