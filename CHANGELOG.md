@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.2
 
 ### What games need to do
 
@@ -11,6 +11,8 @@
 - A game that builds one zip per language on its releases can now say so to `game.yml`:
   `with: each-language: true`. A game with its own browser tests (Playwright) can run them with
   the same kit release: `browser-tests: python -m tests.e2e_browser`, instead of a job of its own.
+- A game that shows a scoreboard with `EduGame.scoreboard({board})` should check the answer's
+  `board` (below).
 
 ### Changes
 
@@ -24,11 +26,6 @@
   `each-language` input: the Build job also makes one zip per language, and attaches them to a
   release with the others; and a `browser-tests` input: a **Browser** job runs the game's own
   browser tests with this kit release, Playwright and Chromium (screenshots/ in its Artifacts).
-- Nothing. A game that shows a scoreboard with `EduGame.scoreboard({board})` should check the answer's
-  `board` (below).
-
-### Changes
-
 - **Docs:** a scoreboard for each language, with `scoring.boards` (docs/SCORING.md), and
   `EduGame.scoreboard({board})` answering with another board's scoreboard when the one asked for is
   empty on the Kolibri Games games page (docs/HELPER.md). Sparkle's scoring in the tests' `EXISTING` and
