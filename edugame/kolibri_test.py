@@ -7,7 +7,10 @@ edugame kolibri-test: play a game in a real Kolibri, the way learners get it.
 What it does (in a throwaway Kolibri, in a temporary folder, so it never touches a Kolibri you use):
 
 1. Builds the game's zip, sets up Kolibri with a learner, and adds the zip to a channel as an
-   HTML5 app, as importing a channel from Kolibri Studio would.
+   HTML5 app, as importing a channel from Kolibri Studio would. A game with packages (one zip
+   per lesson, map or level pack) gets a channel for each package's zip, and steps 2-6 run for
+   each in turn: every package (--packages all, the default), the first few (--packages 1, 3 ...),
+   or one (--package ID).
 2. Starts Kolibri, signs in as the learner and opens the game in Learn.
 3. First visit: the save helper must reach Kolibri's SCORM connection. Then the game's own play
    steps run, if it has them (tests/kolibri_play.py, below).
@@ -29,7 +32,8 @@ wrong; with them it checks saving and coming back. tests/kolibri_play.py in the 
     def came_back(game):        # check the game carried on
         game.check("Level 2" in game.text("#level"), "back on level 2")
 
-`game` has: page and frame (Playwright), visit (1 or 2), data (a dict kept between visits),
+`game` has: page and frame (Playwright), visit (1 or 2), package (the package's id, or None for a
+game without packages), data (a dict kept between visits, one for each package),
 js(expression), wait_for(expression), click(selector), fill(selector, text), text(selector),
 press(*keys), hold(key, ms), check(condition, what), shot(name), expect_complete.
 
@@ -61,11 +65,12 @@ class Failed(Exception):
 class Report:
     def __init__(self):
         self.failures = []
+        self.package = None        # the package being played, for games with packages
 
     def check(self, cond, what):
         print(("ok   " if cond else "FAIL ") + what, flush=True)
         if not cond:
-            self.failures.append(what)
+            self.failures.append("%s: %s" % (self.package, what) if self.package else what)
         return bool(cond)
 
     def note(self, what):
@@ -106,11 +111,14 @@ class Kolibri:
         print(out[-3000:])
         raise Failed("%s gave no result" % script)
 
-    def set_up(self, zip_path, title):
+    def set_up(self):
         print("Setting up Kolibri in %s ..." % self.home, flush=True)
         self.run("manage", "migrate")
         self.run("manage", "provisiondevice", "--facility", "Test School", "--preset", "formal",
                  "--superusername", "admin", "--superuserpassword", "admin123", "--language_id", "en", "--noinput")
+
+    def add(self, zip_path, title):
+        """The zip in a channel of its own (and the learner, the first time)."""
         return self.shell("setup_channel.py", EDUGAME_ZIP=os.path.abspath(zip_path), EDUGAME_TITLE=title,
                           EDUGAME_LEARNER=LEARNER, EDUGAME_PASSWORD=PASSWORD)
 
@@ -147,6 +155,7 @@ class Game:
         self.frame = None
         self.visit = 0
         self.data = data
+        self.package = None        # the package's id, for a game with packages
         self.expect_complete = False
         self._report = report
         self._shots = shots
@@ -189,7 +198,8 @@ class Game:
 
     def shot(self, name):
         if self._shots:
-            self.page.screenshot(path=os.path.join(self._shots, "%d-%s.png" % (self.visit, name)))
+            prefix = self.package + "-" if self.package else ""
+            self.page.screenshot(path=os.path.join(self._shots, "%s%d-%s.png" % (prefix, self.visit, name)))
 
 
 def load_play(path):
@@ -267,7 +277,7 @@ def open_game(page, base, channel, report, visit):
     return frame, state
 
 
-def play(kolibri, channel, play_steps, report, shots):
+def play(kolibri, channel, play_steps, report, shots, package=None):
     from playwright.sync_api import sync_playwright  # only needed here
 
     errors = []
@@ -278,6 +288,7 @@ def play(kolibri, channel, play_steps, report, shots):
         page.on("pageerror", lambda e: errors.append(str(e)))
         page.on("response", lambda r: r.status >= 400 and "/content/" in r.url and report.note("HTTP %s %s" % (r.status, r.url)))
         game = Game(page, report, shots, data)
+        game.package = package
         try:
             if not report.check(sign_in(page, kolibri.base, channel["facility"]), "signed in as a learner"):
                 return
@@ -361,7 +372,31 @@ def check_record(rec, expect_complete, report):
 
 # --------------------------------------------------------------------- run
 
-def run(folder, play_file=None, port=8080, shots="kolibri-screenshots", keep=False):
+def packages_to_play(project, packages="all", package=None):
+    """The zips to play, as (project, package id) pairs: the game as learners get it.
+
+    A game with packages (one zip per lesson, map or level pack) is played as each of its packages
+    in turn: `packages` is how many, from the first ("all", or a number like 1 or 3); `package`
+    picks one by id. Built without a package, a zip would leave out every package's own files
+    (package_files), and the test would play a game no learner ever gets. A game without packages
+    is played as it is."""
+    if package:
+        return [(project.variant(package), package)]        # says if there's no such package
+    if not project.packages():
+        return [(project, None)]
+    ids = [p["id"] for p in project.packages()]
+    if str(packages).strip().lower() != "all":
+        try:
+            count = int(packages)
+        except (TypeError, ValueError):
+            count = 0
+        if count < 1:
+            raise projects.ProjectError(['How many packages to play must be "all" or a number from 1 (not %r).' % (packages,)])
+        ids = ids[:count]
+    return [(project.variant(i), i) for i in ids]
+
+
+def run(folder, play_file=None, port=8080, shots="kolibri-screenshots", keep=False, package=None, packages="all"):
     if not shutil.which("kolibri"):
         sys.exit("This needs Kolibri: pip install kolibri playwright && python -m playwright install chromium")
     try:
@@ -370,25 +405,37 @@ def run(folder, play_file=None, port=8080, shots="kolibri-screenshots", keep=Fal
         sys.exit("This needs Playwright: pip install playwright && python -m playwright install chromium")
 
     try:
-        project = projects.load(folder)
+        game = projects.load(folder)
+        to_play = packages_to_play(game, packages, package)
     except projects.ProjectError as e:
         sys.exit("%s can't be built yet:\n  - %s" % (folder, "\n  - ".join(e.problems)))
     play_file = play_file or os.path.join(folder, PLAY_FILE)
     play_steps = load_play(play_file)
-    print("Playing %s in a real Kolibri%s." % (project.title, " with %s" % play_file if play_steps else " (no play steps)"), flush=True)
+    ids = [i for _, i in to_play if i]
+    print("Playing %s in a real Kolibri%s%s." % (
+        game.title,
+        " as %d of its %d packages (%s)" % (len(ids), len(game.packages()), ", ".join(ids)) if ids else "",
+        " with %s" % play_file if play_steps else " (no play steps)"), flush=True)
     if shots:
         os.makedirs(shots, exist_ok=True)
 
     work = tempfile.mkdtemp(prefix="edugame-kolibri-")
     home = os.path.join(work, "kolibri-home")
-    zip_path = build.build_zip(project, os.path.join(work, "dist"))
     kolibri = Kolibri(home, port)
     report = Report()
     try:
-        channel = kolibri.set_up(zip_path, project.title)
-        print("Added %s to a channel." % os.path.basename(zip_path), flush=True)
+        kolibri.set_up()
+        channels = []
+        for variant, pkg in to_play:
+            zip_path = build.build_zip(variant, os.path.join(work, "dist"))
+            channels.append((kolibri.add(zip_path, variant.title), pkg))
+            print("Added %s to a channel." % os.path.basename(zip_path), flush=True)
         kolibri.start()
-        play(kolibri, channel, play_steps, report, shots)
+        for channel, pkg in channels:
+            if pkg:
+                print("\n== Package %s" % pkg, flush=True)
+            report.package = pkg
+            play(kolibri, channel, play_steps, report, shots, pkg)
     except Failed as e:
         report.check(False, str(e))
     finally:
@@ -399,7 +446,9 @@ def run(folder, play_file=None, port=8080, shots="kolibri-screenshots", keep=Fal
             shutil.rmtree(work, ignore_errors=True)
     print()
     if report.failures:
-        print("%d check(s) failed in Kolibri." % len(report.failures))
+        print("%d check(s) failed in Kolibri:" % len(report.failures))
+        for f in report.failures:
+            print("  - " + f)
         return 1
-    print("Played in Kolibri: everything worked.")
+    print("Played in Kolibri: everything worked%s." % (" in %d packages" % len(ids) if len(ids) > 1 else ""))
     return 0

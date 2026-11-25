@@ -1,5 +1,28 @@
 # Changelog
 
+## Unreleased
+
+### What games need to do
+
+- **Games with packages** (one zip per lesson, map or level pack): nothing, but the Real Kolibri
+  job now plays every package's zip, which takes a few minutes each. To play fewer, add
+  `kolibri-packages: 1` (or another number) to `with:` in `.github/workflows/build.yml`. Play steps
+  (`tests/kolibri_play.py`) can see which package is playing in `game.package`.
+- A game that builds one zip per language on its releases can now say so to `game.yml`:
+  `with: each-language: true`.
+
+### Changes
+
+- **`edugame kolibri-test` plays a game with packages as its packages.** It used to build the game
+  without a package, so the zip it played left out every package's own files: for LIT, a lesson
+  with no lesson in it; for SINGE, a map game with no maps. It still "passed" without play steps.
+  Now each package's zip gets a channel of its own in the same throwaway Kolibri, and each is
+  played in turn: `--packages all` (the default), `--packages N` for the first N, or `--package ID`.
+  (Found moving LIT to the kit's workflows.)
+- **`game.yml`**: a `kolibri-packages` input (`"all"` by default, or a number), and an
+  `each-language` input: the Build job also makes one zip per language, and attaches them to a
+  release with the others.
+
 ## 0.3.1
 
 ### What games need to do

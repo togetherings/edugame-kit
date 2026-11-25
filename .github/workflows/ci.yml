@@ -65,15 +65,16 @@ jobs:
           path: screenshots
           if-no-files-found: ignore
 
-  # Plays the starter games and an example in a real Kolibri (edugame kolibri-test), as a
-  # game made with the kit does in its own Build workflow.
+  # Plays the starter games, and a starter built as two packages (each package's zip in its own
+  # channel), in a real Kolibri (edugame kolibri-test), as a game made with the kit does in its
+  # own Build workflow.
   kolibri:
     name: Real Kolibri (${{ matrix.game }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        game: [templates/saved, templates/scored]
+        game: [templates/saved, templates/scored, packages]
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
@@ -88,6 +89,7 @@ jobs:
         run: |
           case "${{ matrix.game }}" in
             templates/*) edugame new game --type "$(basename ${{ matrix.game }})" --github; GAME=game ;;
+            packages) python -m tests.packaged_game game; GAME=game ;;
             *) GAME="${{ matrix.game }}" ;;
           esac
           edugame kolibri-test "$GAME" --screenshots kolibri-screenshots

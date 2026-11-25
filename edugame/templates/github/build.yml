@@ -26,7 +26,9 @@ jobs:
     uses: togetherings/edugame-kit/.github/workflows/game.yml@v0.3.1
     # with:
     #   tests: node tests/run-tests.js     # the game's own tests, if it has any
+    #   each-language: true                # also one zip per language (for games in several languages)
     #   kolibri: false                     # to skip playing it in a real Kolibri
+    #   kolibri-packages: 1                # for a game with packages: play only the first in Kolibri (default all)
 
   # The name the "Protect main" ruleset asks for (see docs/platforms/GITHUB_PAGES.md in the
   # kit): it passes only when every job above passed. Add new jobs to "needs".

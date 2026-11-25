@@ -216,4 +216,7 @@ edugame preview my-game --package lesson-01 --lang fr
 ```
 
 `edugame check` lists each package with its files and languages. `edugame pages` puts each package
-on the site, with its own Play button.
+on the site, with its own Play button. `edugame kolibri-test` plays each package's zip in a real
+Kolibri (or the first few: `--packages`, and `kolibri-packages` in the Build workflow; see
+[platforms/KOLIBRI.md](platforms/KOLIBRI.md)). In the Build workflow, `each-language: true` also
+builds one zip per package and language.

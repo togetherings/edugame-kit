@@ -59,6 +59,21 @@ edugame kolibri-test my-game
 
 It sets up a throwaway Kolibri in a temporary folder (it never touches a Kolibri you use), adds
 the game's zip to a channel as an HTML5 app, signs in as a learner and opens the game in Learn.
+A game with packages (one zip per lesson, map or level pack; see "Packages" in
+[LANGUAGES.md](../LANGUAGES.md#packages-several-zips-from-one-folder)) gets a channel for each package's zip, and each one is played in
+turn, the way learners get them. `--packages 1` plays only the first, `--packages 3` the first three,
+and `--packages all` (the default) every one; `--package lesson-02` plays just that one. In the Build
+workflow it's the `kolibri-packages` input:
+
+```yaml
+    uses: togetherings/edugame-kit/.github/workflows/game.yml@vX.Y.Z
+    with:
+      kolibri-packages: 1      # lessons that are the same game with other words: the first is enough
+```
+
+Play all of them when packages differ in ways that can break (other maps, other levels, a much
+bigger zip); each one adds a few minutes. The play steps get `game.package`, the package's id, so
+they can play each one its own way.
 Then it checks that:
 
 1. the game opens, and the save helper finds Kolibri's SCORM connection;

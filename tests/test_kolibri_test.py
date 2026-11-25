@@ -66,3 +66,43 @@ def test_what_kolibri_recorded_is_checked():
     report = kolibri_test.Report()
     kolibri_test.check_record(record(progress=0.0, status="incomplete"), False, report)
     assert not report.failures
+
+
+def test_a_game_with_packages_is_played_as_its_packages(tmp_path):
+    from tests.test_languages import packaged
+    p = projects.load(packaged(tmp_path))
+    assert not any(f.startswith("lessons/") for f in p.files())       # what it used to play
+
+    every = kolibri_test.packages_to_play(p)
+    assert [i for _, i in every] == ["lesson-01", "lesson-02"]
+    assert "lessons/01/en.json" in every[0][0].files() and "lessons/02/fr.json" not in every[0][0].files()
+    assert "lessons/02/fr.json" in every[1][0].files() and "lessons/01/en.json" not in every[1][0].files()
+    assert [i for _, i in kolibri_test.packages_to_play(p, "ALL")] == ["lesson-01", "lesson-02"]
+    assert [i for _, i in kolibri_test.packages_to_play(p, "1")] == ["lesson-01"]
+    assert [i for _, i in kolibri_test.packages_to_play(p, 5)] == ["lesson-01", "lesson-02"]
+    assert [i for _, i in kolibri_test.packages_to_play(p, package="lesson-02")] == ["lesson-02"]
+    for bad in ("0", "-1", "some", ""):
+        try:
+            kolibri_test.packages_to_play(p, bad)
+        except projects.ProjectError as e:
+            assert "number" in str(e.problems)
+        else:
+            assert False, "%r isn't a number of packages" % bad
+
+
+def test_a_game_without_packages_is_played_as_it_is():
+    p = projects.load(os.path.join(EXAMPLES, "number-hunt"))
+    assert kolibri_test.packages_to_play(p) == [(p, None)]
+    assert kolibri_test.packages_to_play(p, "1") == [(p, None)]
+    try:
+        kolibri_test.packages_to_play(p, package="lesson-01")
+    except projects.ProjectError as e:
+        assert "no package" in str(e.problems)
+    else:
+        assert False, "a game without packages has no lesson-01"
+
+
+def test_the_build_workflow_passes_how_many_packages_to_play():
+    workflow = open(os.path.join(os.path.dirname(TEMPLATES), "..", ".github", "workflows", "game.yml")).read()
+    assert "kolibri-packages:" in workflow and '--packages "${{ inputs.kolibri-packages }}"' in workflow
+    assert "each-language:" in workflow and "--each-language" in workflow

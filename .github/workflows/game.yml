@@ -12,8 +12,10 @@
 # Jobs:
 #   * Build: the game's own tests (the "tests" input), edugame check, edugame build. The zips
 #     are in the run's Artifacts (game-zips); on a published release they're attached to it.
-#   * Real Kolibri: edugame kolibri-test, with the game's tests/kolibri_play.py. Screenshots
-#     are in the run's Artifacts (kolibri-screenshots).
+#   * Real Kolibri: edugame kolibri-test, with the game's tests/kolibri_play.py. A game with
+#     packages (one zip per lesson, map or level pack) is played as each package's zip: all of
+#     them, or the first few with "kolibri-packages". Screenshots are in the run's Artifacts
+#     (kolibri-screenshots).
 name: EduGame Kit game
 
 on:
@@ -27,10 +29,18 @@ on:
         description: A command for the game's own tests, run before the kit's checks (like "node tests/run-tests.js")
         type: string
         default: ""
+      each-language:
+        description: Also build one zip per language (edugame build --each-language), besides the zips with every language
+        type: boolean
+        default: false
       kolibri:
         description: Play the game in a real Kolibri
         type: boolean
         default: true
+      kolibri-packages:
+        description: For a game with packages, how many to play in Kolibri, from the first ("all", or a number like 1 or 3)
+        type: string
+        default: "all"
       kit:
         description: What to pip install instead of this release of the kit (the kit's own tests use ".")
         type: string
@@ -59,7 +69,10 @@ jobs:
       - name: Check the game (missing words, mistakes in edugame.json)
         run: edugame check "${{ inputs.folder }}"
       - name: Build the zips
-        run: edugame build "${{ inputs.folder }}" -o dist && ls -l dist
+        run: |
+          edugame build "${{ inputs.folder }}" -o dist
+          if [ "${{ inputs.each-language }}" = "true" ]; then edugame build "${{ inputs.folder }}" -o dist --each-language; fi
+          ls -l dist
       - uses: actions/upload-artifact@v7
         with:
           name: game-zips
@@ -92,7 +105,7 @@ jobs:
           python -m playwright install --with-deps chromium
           echo "::notice title=Kolibri version::$(python -c 'import kolibri; print(kolibri.__version__)')"
       - name: Play the game in Kolibri
-        run: edugame kolibri-test "${{ inputs.folder }}" --screenshots kolibri-screenshots
+        run: edugame kolibri-test "${{ inputs.folder }}" --packages "${{ inputs.kolibri-packages }}" --screenshots kolibri-screenshots
       - uses: actions/upload-artifact@v7
         if: always()
         with:
