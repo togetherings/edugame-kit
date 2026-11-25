@@ -247,6 +247,55 @@ def variants(project, package=None, languages=None, each_language=False):
     return out
 
 
+def build_bundles(project, out_dir, languages=None):
+    """Release bundles for a game with packages (one zip per lesson, map or level pack): zips of zips, so a
+    release has a few files however many packages there are. A learning system still needs each package's own
+    zip, so a bundle holds them as they are (stored, not compressed again):
+
+      <game>-all-languages-<version>.zip    each package's zip with every language
+      <game>-<language>-<version>.zip       each package's zip in that language, for the packages that have it
+
+    Each bundle has a README.txt listing its zips. Returns the paths made."""
+    import tempfile
+    work = tempfile.mkdtemp(prefix="edugame-bundle-")
+    try:
+        groups = [("all-languages", "every language", variants(project, languages=languages))]
+        by_language = {}
+        for v in variants(project, languages=languages, each_language=True):
+            by_language.setdefault(v.language, []).append(v)
+        order = project.variant(None, languages).languages if languages else project.languages
+        for code in order:
+            if code in by_language:
+                groups.append((code, code, by_language[code]))
+        made = []
+        for name, what, vs in groups:
+            zips = []
+            for v in vs:
+                path = build_zip(v, os.path.join(work, name))
+                zips.append((os.path.basename(path), v))
+            lines = ["%s %s: %s" % (project.title, project.version, what), "",
+                     "One zip for each part of the game. Add each one on its own: to a channel in Kolibri Studio",
+                     "as an HTML5 app, to Moodle as a SCORM package, or unzipped as a RACHEL module.", ""]
+            lines += ["  %s  %s" % (z, v.title) for z, v in zips]
+            path = os.path.join(out_dir, "%s-%s-%s.zip" % (project.slug, name, project.version))
+            os.makedirs(os.path.abspath(out_dir), exist_ok=True)
+            tmp = path + ".part"
+            with zipfile.ZipFile(tmp, "w", zipfile.ZIP_STORED) as z:
+                info = zipfile.ZipInfo("README.txt", ZIP_DATE)
+                info.external_attr = 0o644 << 16
+                z.writestr(info, ("\n".join(lines) + "\n").encode("utf-8"), zipfile.ZIP_DEFLATED)
+                for zname, _ in zips:
+                    with open(os.path.join(work, name, zname), "rb") as f:
+                        info = zipfile.ZipInfo(zname, ZIP_DATE)
+                        info.external_attr = 0o644 << 16
+                        z.writestr(info, f.read())
+            os.replace(tmp, path)
+            made.append(path)
+        return made
+    finally:
+        shutil.rmtree(work, ignore_errors=True)
+
+
 def build_all(project, out_dir, package=None, languages=None, each_language=False,
               sugarizer=False, sugar_lib=None, zim=False):
     """Every zip asked for. Returns the paths made; raises ImportError for --zim without libzim."""

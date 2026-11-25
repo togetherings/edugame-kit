@@ -108,6 +108,8 @@ jobs:
     with:
       folder: examples/number-hunt
       kit: "."
+      each-language: true
+      release-bundles: true
 
   # The one check the "Protect main" ruleset requires in every togetherings repository: it passes only when
   # every job above passed, so tests can be added or renamed without changing the ruleset.

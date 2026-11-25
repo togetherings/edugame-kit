@@ -218,3 +218,26 @@ def test_the_template_repository_is_a_working_game(tmp_path):
     assert p.id == "org.example.my-game" and p.title == "My game" and not projects.missing_strings(p)
     assert "README.md" not in p.files()          # notes for the repository, not part of the game
     build.build_folder(p, str(tmp_path / "built"))
+
+
+def test_bundles_hold_each_package_zip_once_per_language(tmp_path):
+    import zipfile
+    from tests.test_languages import packaged
+    p = projects.load(packaged(tmp_path))          # lesson-01 (en, fr) and lesson-02 (fr only)
+    made = build.build_bundles(p, str(tmp_path / "bundles"))
+    names = [os.path.basename(m) for m in made]
+    assert names == ["%s-all-languages-%s.zip" % (p.slug, p.version), "%s-en-%s.zip" % (p.slug, p.version),
+                     "%s-fr-%s.zip" % (p.slug, p.version)]
+    inside = {n: zipfile.ZipFile(m).namelist() for n, m in zip(names, made)}
+    v = p.version
+    assert inside[names[0]] == ["README.txt", "%s-lesson-01-%s.zip" % (p.slug, v), "%s-lesson-02-%s.zip" % (p.slug, v)]
+    assert inside[names[1]] == ["README.txt", "%s-lesson-01-en-%s.zip" % (p.slug, v)]            # lesson 2 has no English
+    assert inside[names[2]] == ["README.txt", "%s-lesson-01-fr-%s.zip" % (p.slug, v), "%s-lesson-02-fr-%s.zip" % (p.slug, v)]
+    with zipfile.ZipFile(made[2]) as z:
+        inner = z.getinfo("%s-lesson-02-fr-%s.zip" % (p.slug, v))
+        assert inner.compress_type == zipfile.ZIP_STORED                       # zips aren't compressed twice
+        readme = z.read("README.txt").decode("utf-8")
+        assert "%s-lesson-02-fr-%s.zip" % (p.slug, v) in readme and "Kolibri Studio" in readme
+        import io
+        lesson = zipfile.ZipFile(io.BytesIO(z.read("%s-lesson-02-fr-%s.zip" % (p.slug, v)))).namelist()
+        assert "lessons/02/fr.json.js" in lesson and "index.html" in lesson                      # a whole game zip

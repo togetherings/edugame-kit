@@ -46,6 +46,7 @@ edugame build my-game                # dist/my-game-0.1.0.zip
 edugame build my-game --all          # also the Sugarizer activity and, with libzim, the ZIM file
 edugame pages my-game -o site        # a GitHub Pages site for the game
 edugame kolibri-test my-game         # play it in a real Kolibri (needs kolibri and playwright)
+edugame bundle my-game               # a game with packages: a zip of zips for each language, for releases
 ```
 
 Change the `id` in `my-game/edugame.json` to one of your own (like `org.yourschool.my-game`),

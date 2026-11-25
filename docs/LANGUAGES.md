@@ -212,6 +212,7 @@ edugame build my-game                        # dist/my-game-lesson-01-1.0.0.zip,
 edugame build my-game --package lesson-01
 edugame build my-game --lang fr              # only French
 edugame build my-game --each-language        # one zip per language: my-game-lesson-01-fr-1.0.0.zip ...
+edugame bundle my-game                       # bundles/my-game-all-languages-1.0.0.zip, bundles/my-game-fr-1.0.0.zip ...
 edugame preview my-game --package lesson-01 --lang fr
 ```
 
@@ -220,3 +221,11 @@ on the site, with its own Play button. `edugame kolibri-test` plays each package
 Kolibri (or the first few: `--packages`, and `kolibri-packages` in the Build workflow; see
 [platforms/KOLIBRI.md](platforms/KOLIBRI.md)). In the Build workflow, `each-language: true` also
 builds one zip per package and language.
+
+**Bundles for releases.** With many packages in several languages, a release would have a file for
+every package and language (15 lessons in 4 languages: 75). `edugame bundle` makes zips of zips
+instead: one with every package's zip in every language (`<game>-all-languages-<version>.zip`), and
+one for each language with the packages that have it (`<game>-fr-<version>.zip`). Each holds the
+package zips as they are, since a learning system still needs each one on its own, and a README.txt
+listing them. In the Build workflow, `release-bundles: true` attaches the bundles to a release
+instead of the separate zips (which stay in each run's Artifacts, game-zips).

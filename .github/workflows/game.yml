@@ -12,6 +12,8 @@
 # Jobs:
 #   * Build: the game's own tests (the "tests" input), edugame check, edugame build. The zips
 #     are in the run's Artifacts (game-zips); on a published release they're attached to it.
+#   * Releases get the zips, or with "release-bundles" (games with packages) a few bundles of them:
+#     one with every language and one for each language (edugame bundle).
 #   * Browser: the game's own browser tests (the "browser-tests" input), if it has any.
 #   * Real Kolibri: edugame kolibri-test, with the game's tests/kolibri_play.py. A game with
 #     packages (one zip per lesson, map or level pack) is played as each package's zip: all of
@@ -36,6 +38,10 @@ on:
         default: ""
       each-language:
         description: Also build one zip per language (edugame build --each-language), besides the zips with every language
+        type: boolean
+        default: false
+      release-bundles:
+        description: For a game with packages, a release gets bundles (edugame bundle) instead of every package's zip - one with every language, and one for each language
         type: boolean
         default: false
       kolibri:
@@ -82,6 +88,16 @@ jobs:
         with:
           name: game-zips
           path: dist/*.zip
+      - name: Bundle the zips for the release
+        if: inputs.release-bundles
+        run: |
+          edugame bundle "${{ inputs.folder }}" -o bundles
+          for b in bundles/*.zip; do echo "$b:"; unzip -Z1 "$b" | sed 's/^/  /'; done
+      - uses: actions/upload-artifact@v7
+        if: inputs.release-bundles
+        with:
+          name: release-bundles
+          path: bundles/*.zip
       - name: The tag must match the version in edugame.json
         if: github.event_name == 'release'
         run: |
@@ -91,7 +107,9 @@ jobs:
         if: github.event_name == 'release'
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release upload "$GITHUB_REF_NAME" dist/*.zip --clobber
+        run: |
+          if [ "${{ inputs.release-bundles }}" = "true" ]; then files=(bundles/*.zip); else files=(dist/*.zip); fi
+          gh release upload "$GITHUB_REF_NAME" "${files[@]}" --clobber
 
   # The game's own browser tests, with this release of the kit, Playwright and Chromium. Anything
   # they put in screenshots/ is in the run's Artifacts (browser-screenshots).

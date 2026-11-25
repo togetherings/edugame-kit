@@ -1,5 +1,21 @@
 # Changelog
 
+## Unreleased
+
+### What games need to do
+
+- Nothing. A game with packages can attach a few bundles to its releases instead of every
+  package's zip: `with: release-bundles: true` in `.github/workflows/build.yml`.
+
+### Changes
+
+- **`edugame bundle`**: for a game with packages, zips of zips for releases: one with every
+  package's zip in every language (`<game>-all-languages-<version>.zip`), and one for each language
+  with the packages that have it (`<game>-<language>-<version>.zip`), each with a README.txt
+  listing its zips. (LIT will have 15 lessons or more in several languages: 75 files a release.)
+- **`game.yml`**: a `release-bundles` input. The Build job also makes the bundles (in the run's
+  Artifacts, release-bundles) and attaches them to a release instead of the separate zips.
+
 ## 0.3.2
 
 ### What games need to do
