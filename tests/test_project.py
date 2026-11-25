@@ -119,8 +119,17 @@ EXISTING = {
         "boards": {"label": "map", "names": {"sierra_leone": "sierra_leone", "sierra_leone_flags": "sierra_leone_flags"},
                    "total": True},
     },
-    # Sparkle: points for each daily word, added up; no time at all.
-    "sparkle": {"order": "desc", "tiebreak": "none", "counts": "total", "min": 0, "max": 9},
+    # Sparkle: points for each daily word, added up; no time at all; a board for each language
+    # (English and French players aren't ranked together), and no total.
+    "sparkle": {
+        "fields": [
+            {"key": "score", "label": "score_label", "unit": "score_unit", "order": "desc", "min": 0, "max": 10, "total": "sum"},
+            {"key": "plays", "label": "days_played", "source": "plays"},
+        ],
+        "rank_by": ["score"],
+        "counts": "total",
+        "boards": {"label": "board_label", "names": {"en": "board.en", "fr": "board.fr"}},
+    },
 }
 
 
@@ -140,4 +149,5 @@ def test_the_kit_can_score_every_existing_game(tmp_path):
             assert [(f["key"], f["order"]) for f in spec["fields"][:2]] == [("acc", "desc"), ("time", "asc")]
         if name == "sparkle":
             assert [f["key"] for f in spec["fields"]] == ["score", "plays"] and spec["counts"] == "total"
-            assert spec["rank_by"] == ["score"]
+            assert spec["rank_by"] == ["score"] and sorted(spec["boards"]["names"]) == ["en", "fr"]
+            assert not spec["boards"]["total"]
