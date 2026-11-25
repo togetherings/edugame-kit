@@ -26,6 +26,7 @@ jobs:
     uses: togetherings/edugame-kit/.github/workflows/game.yml@v0.3.1
     # with:
     #   tests: node tests/run-tests.js     # the game's own tests, if it has any
+    #   browser-tests: python -m tests.e2e_browser --screenshots screenshots   # ... and browser tests (Playwright)
     #   each-language: true                # also one zip per language (for games in several languages)
     #   kolibri: false                     # to skip playing it in a real Kolibri
     #   kolibri-packages: 1                # for a game with packages: play only the first in Kolibri (default all)

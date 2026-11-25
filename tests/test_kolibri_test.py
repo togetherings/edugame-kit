@@ -106,3 +106,4 @@ def test_the_build_workflow_passes_how_many_packages_to_play():
     workflow = open(os.path.join(os.path.dirname(TEMPLATES), "..", ".github", "workflows", "game.yml")).read()
     assert "kolibri-packages:" in workflow and '--packages "${{ inputs.kolibri-packages }}"' in workflow
     assert "each-language:" in workflow and "--each-language" in workflow
+    assert "browser-tests:" in workflow and "${{ inputs.browser-tests }}" in workflow

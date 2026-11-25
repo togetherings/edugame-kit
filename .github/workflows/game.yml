@@ -12,6 +12,7 @@
 # Jobs:
 #   * Build: the game's own tests (the "tests" input), edugame check, edugame build. The zips
 #     are in the run's Artifacts (game-zips); on a published release they're attached to it.
+#   * Browser: the game's own browser tests (the "browser-tests" input), if it has any.
 #   * Real Kolibri: edugame kolibri-test, with the game's tests/kolibri_play.py. A game with
 #     packages (one zip per lesson, map or level pack) is played as each package's zip: all of
 #     them, or the first few with "kolibri-packages". Screenshots are in the run's Artifacts
@@ -27,6 +28,10 @@ on:
         default: "."
       tests:
         description: A command for the game's own tests, run before the kit's checks (like "node tests/run-tests.js")
+        type: string
+        default: ""
+      browser-tests:
+        description: A command for the game's own browser tests, run with Playwright and Chromium installed (like "python -m tests.e2e_browser --screenshots screenshots")
         type: string
         default: ""
       each-language:
@@ -87,6 +92,30 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh release upload "$GITHUB_REF_NAME" dist/*.zip --clobber
+
+  # The game's own browser tests, with this release of the kit, Playwright and Chromium. Anything
+  # they put in screenshots/ is in the run's Artifacts (browser-screenshots).
+  browser:
+    name: Browser
+    if: inputs.browser-tests != ''
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.11"
+      - name: Install EduGame Kit and a browser
+        run: |
+          pip install playwright "${KIT:-edugame-kit @ git+https://github.com/togetherings/edugame-kit@$KIT_REF}"
+          python -m playwright install --with-deps chromium
+      - name: The game's browser tests
+        run: ${{ inputs.browser-tests }}
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: browser-screenshots
+          path: screenshots
+          if-no-files-found: ignore
 
   # Adds the zip to a channel in a real Kolibri and plays it in Learn as a learner: the game
   # must save through Kolibri's SCORM connection and carry on after the learner leaves.

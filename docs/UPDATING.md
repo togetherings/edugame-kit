@@ -42,7 +42,8 @@ Games made before 0.3.0 have the kit's steps in their own `build.yml` and `pages
 
 1. Replace `.github/workflows/build.yml` and `pages.yml` with the starter's
    ([`edugame/templates/github/`](../edugame/templates/github/)). Keep anything the game added:
-   its own tests go in `with: tests: ...` (like `tests: node tests/run-tests.js`), and a game that
+   its own tests go in `with: tests: ...` (like `tests: node tests/run-tests.js`), browser tests
+   that need Playwright in `browser-tests: ...` (they run with the same kit release), and a game that
    also built one zip per language (`edugame build --each-language`) adds `each-language: true`,
    and a game with many packages that are the same game with other words can play only the first
    in Kolibri with `kolibri-packages: 1` (every package is played by default);

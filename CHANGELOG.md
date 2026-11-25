@@ -9,7 +9,8 @@
   `kolibri-packages: 1` (or another number) to `with:` in `.github/workflows/build.yml`. Play steps
   (`tests/kolibri_play.py`) can see which package is playing in `game.package`.
 - A game that builds one zip per language on its releases can now say so to `game.yml`:
-  `with: each-language: true`.
+  `with: each-language: true`. A game with its own browser tests (Playwright) can run them with
+  the same kit release: `browser-tests: python -m tests.e2e_browser`, instead of a job of its own.
 
 ### Changes
 
@@ -19,9 +20,10 @@
   Now each package's zip gets a channel of its own in the same throwaway Kolibri, and each is
   played in turn: `--packages all` (the default), `--packages N` for the first N, or `--package ID`.
   (Found moving LIT to the kit's workflows.)
-- **`game.yml`**: a `kolibri-packages` input (`"all"` by default, or a number), and an
+- **`game.yml`**: a `kolibri-packages` input (`"all"` by default, or a number); an
   `each-language` input: the Build job also makes one zip per language, and attaches them to a
-  release with the others.
+  release with the others; and a `browser-tests` input: a **Browser** job runs the game's own
+  browser tests with this kit release, Playwright and Chromium (screenshots/ in its Artifacts).
 
 ## 0.3.1
 
