@@ -241,3 +241,21 @@ def test_bundles_hold_each_package_zip_once_per_language(tmp_path):
         import io
         lesson = zipfile.ZipFile(io.BytesIO(z.read("%s-lesson-02-fr-%s.zip" % (p.slug, v)))).namelist()
         assert "lessons/02/fr.json.js" in lesson and "index.html" in lesson                      # a whole game zip
+
+
+def test_bundles_written_inside_the_game_never_end_up_in_its_zips(tmp_path):
+    # The Build workflow runs "edugame bundle . -o bundles": the bundles land inside the game's folder.
+    import io
+    import zipfile
+    from tests.test_languages import packaged
+    folder = packaged(tmp_path)
+    first = build.build_bundles(projects.load(folder), os.path.join(folder, "bundles"))
+    sizes = [os.path.getsize(m) for m in first]
+    again = build.build_bundles(projects.load(folder), os.path.join(folder, "bundles"))      # with the first ones there
+    assert [os.path.getsize(m) for m in again] == sizes
+    for m in again:
+        with zipfile.ZipFile(m) as z:
+            for name in z.namelist():
+                if name.endswith(".zip"):
+                    inner = zipfile.ZipFile(io.BytesIO(z.read(name))).namelist()
+                    assert not any(n.startswith("bundles/") or n.endswith(".zip") for n in inner), (m, name)

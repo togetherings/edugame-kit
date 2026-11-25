@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.3.4
+
+### What games need to do
+
+- Nothing. Games with `release-bundles: true` should take this release before their next release.
+
+### Changes
+
+- **Fixed: bundles made inside the game's folder ended up inside each other.** The Build workflow
+  runs `edugame bundle . -o bundles`, and each package zip made after the first bundle took the
+  bundles already written as game files (LIT's Spanish bundle came to 16 MB, not 130 KB). A
+  `bundles` folder is now never part of a game (like `dist`), and every package's zip is made
+  before any bundle is written.
+
 ## 0.3.3
 
 ### What games need to do

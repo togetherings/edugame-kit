@@ -267,12 +267,13 @@ def build_bundles(project, out_dir, languages=None):
         for code in order:
             if code in by_language:
                 groups.append((code, code, by_language[code]))
-        made = []
+        # Every package's zip first, then the bundles: a bundle written inside the game's folder must never
+        # find its way into a zip made after it.
+        built = []
         for name, what, vs in groups:
-            zips = []
-            for v in vs:
-                path = build_zip(v, os.path.join(work, name))
-                zips.append((os.path.basename(path), v))
+            built.append((name, what, [(os.path.basename(build_zip(v, os.path.join(work, name))), v) for v in vs]))
+        made = []
+        for name, what, zips in built:
             lines = ["%s %s: %s" % (project.title, project.version, what), "",
                      "One zip for each part of the game. Add each one on its own: to a channel in Kolibri Studio",
                      "as an HTML5 app, to Moodle as a SCORM package, or unzipped as a RACHEL module.", ""]
