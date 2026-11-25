@@ -28,6 +28,7 @@ jobs:
     #   tests: node tests/run-tests.js     # the game's own tests, if it has any
     #   browser-tests: python -m tests.e2e_browser --screenshots screenshots   # ... and browser tests (Playwright)
     #   each-language: true                # also one zip per language (for games in several languages)
+    #   release-bundles: true              # games with packages: a release gets a zip of zips per language
     #   kolibri: false                     # to skip playing it in a real Kolibri
     #   kolibri-packages: 1                # for a game with packages: play only the first in Kolibri (default all)
 
