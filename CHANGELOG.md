@@ -15,6 +15,10 @@
   listing its zips. (LIT will have 15 lessons or more in several languages: 75 files a release.)
 - **`game.yml`**: a `release-bundles` input. The Build job also makes the bundles (in the run's
   Artifacts, release-bundles) and attaches them to a release instead of the separate zips.
+- Nothing.
+- **Docs:** Chromium warns about the test page's sandboxed frame on every page; browser tests that
+  fail on console warnings should skip that one (docs/HELPER.md). (Found running LIT's browser test
+  through `browser-tests`.)
 
 ## 0.3.2
 
