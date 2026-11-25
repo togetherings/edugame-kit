@@ -166,6 +166,9 @@ helps), and never save over one it couldn't read without asking the learner.
   Enter and submit buttons would do nothing. The helper sends a form's `submit` event itself, on
   every platform: handle `submit` and call `preventDefault()`, as usual, and it works everywhere.
   Kolibri's frame also blocks pop-ups and `alert()`; the test page is sandboxed the same way.
+  Chromium warns about that sandbox on every page ("An iframe which has both allow-scripts and
+  allow-same-origin ... can escape its sandboxing"): a browser test that fails on console warnings
+  should skip that one (LIT's `tests/e2e_browser.py` does).
 - **The browser** keeps saves on that device only, and private browsing may drop them.
 - Scores come from the game in the learner's browser, so they can be changed by someone who
   knows how. These are learning games, not tests.
