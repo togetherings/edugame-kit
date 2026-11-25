@@ -42,8 +42,12 @@ Games made before 0.3.0 have the kit's steps in their own `build.yml` and `pages
 
 1. Replace `.github/workflows/build.yml` and `pages.yml` with the starter's
    ([`edugame/templates/github/`](../edugame/templates/github/)). Keep anything the game added:
-   its own tests go in `with: tests: ...` (like `tests: node tests/run-tests.js`); other jobs stay
-   as jobs of their own, listed in **Checks passed**'s `needs`.
+   its own tests go in `with: tests: ...` (like `tests: node tests/run-tests.js`), browser tests
+   that need Playwright in `browser-tests: ...` (they run with the same kit release), and a game that
+   also built one zip per language (`edugame build --each-language`) adds `each-language: true`,
+   and a game with many packages that are the same game with other words can play only the first
+   in Kolibri with `kolibri-packages: 1` (every package is played by default);
+   other jobs stay as jobs of their own, listed in **Checks passed**'s `needs`.
 2. Add [`dependabot.yml`](../edugame/templates/github/dependabot.yml) as `.github/dependabot.yml`.
 3. Add `tests/kolibri_play.py` (see [platforms/KOLIBRI.md](platforms/KOLIBRI.md)) so the
    real-Kolibri test checks saving, or `kolibri: false` to skip it.

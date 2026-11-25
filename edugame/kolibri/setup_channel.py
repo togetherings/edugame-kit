@@ -1,5 +1,5 @@
 """
-Adds a game's zip to a new channel in a throwaway Kolibri, and makes a learner.
+Adds a game's zip to a new channel in a throwaway Kolibri, and makes a learner (if there isn't one).
 
 Runs inside Kolibri (edugame kolibri-test runs it with `kolibri manage shell`), with:
 EDUGAME_ZIP (the zip), EDUGAME_TITLE, EDUGAME_LEARNER and EDUGAME_PASSWORD.
@@ -49,11 +49,13 @@ try:  # newer Kolibris keep a few summary fields on the channel (languages, size
 except Exception as e:  # not needed to play, so carry on
     print("note: couldn't set the channel's summary fields: %r" % e)
 
-# 3. A learner
+# 3. A learner (once: a game with packages gets a channel for each, and the same learner plays them all)
 facility = Facility.get_default_facility()
-learner = FacilityUser.objects.create(username=os.environ["EDUGAME_LEARNER"], full_name="Test Learner", facility=facility)
-learner.set_password(os.environ["EDUGAME_PASSWORD"])
-learner.save()
+learner, made = FacilityUser.objects.get_or_create(username=os.environ["EDUGAME_LEARNER"], facility=facility,
+                                                   defaults={"full_name": "Test Learner"})
+if made:
+    learner.set_password(os.environ["EDUGAME_PASSWORD"])
+    learner.save()
 
 print("EDUGAME_RESULT " + json.dumps({
     "channel_id": channel_id, "node_id": node.id, "content_id": node.content_id, "facility": facility.id}))

@@ -252,7 +252,8 @@ def make_preview_server(folder, port, package=None, languages=None):
 def cmd_kolibri_test(args):
     from . import kolibri_test
     sys.exit(kolibri_test.run(args.folder, play_file=args.play, port=args.port,
-                              shots=args.screenshots, keep=args.keep))
+                              shots=args.screenshots, keep=args.keep, package=args.package,
+                              packages=args.packages))
 
 
 def cmd_preview(args):
@@ -327,6 +328,9 @@ def main(argv=None):
     p.add_argument("--port", type=int, default=8080)
     p.add_argument("--screenshots", default="kolibri-screenshots", help="folder for screenshots ('' for none)")
     p.add_argument("--keep", action="store_true", help="keep the throwaway Kolibri's files, to look at afterwards")
+    p.add_argument("--packages", default="all",
+                   help='for a game with packages: how many to play, from the first ("all", the default, or a number)')
+    p.add_argument("--package", help="play only this package")
     p.set_defaults(func=cmd_kolibri_test)
 
     args = parser.parse_args(argv)

@@ -12,8 +12,11 @@
 # Jobs:
 #   * Build: the game's own tests (the "tests" input), edugame check, edugame build. The zips
 #     are in the run's Artifacts (game-zips); on a published release they're attached to it.
-#   * Real Kolibri: edugame kolibri-test, with the game's tests/kolibri_play.py. Screenshots
-#     are in the run's Artifacts (kolibri-screenshots).
+#   * Browser: the game's own browser tests (the "browser-tests" input), if it has any.
+#   * Real Kolibri: edugame kolibri-test, with the game's tests/kolibri_play.py. A game with
+#     packages (one zip per lesson, map or level pack) is played as each package's zip: all of
+#     them, or the first few with "kolibri-packages". Screenshots are in the run's Artifacts
+#     (kolibri-screenshots).
 name: EduGame Kit game
 
 on:
@@ -27,10 +30,22 @@ on:
         description: A command for the game's own tests, run before the kit's checks (like "node tests/run-tests.js")
         type: string
         default: ""
+      browser-tests:
+        description: A command for the game's own browser tests, run with Playwright and Chromium installed (like "python -m tests.e2e_browser --screenshots screenshots")
+        type: string
+        default: ""
+      each-language:
+        description: Also build one zip per language (edugame build --each-language), besides the zips with every language
+        type: boolean
+        default: false
       kolibri:
         description: Play the game in a real Kolibri
         type: boolean
         default: true
+      kolibri-packages:
+        description: For a game with packages, how many to play in Kolibri, from the first ("all", or a number like 1 or 3)
+        type: string
+        default: "all"
       kit:
         description: What to pip install instead of this release of the kit (the kit's own tests use ".")
         type: string
@@ -59,7 +74,10 @@ jobs:
       - name: Check the game (missing words, mistakes in edugame.json)
         run: edugame check "${{ inputs.folder }}"
       - name: Build the zips
-        run: edugame build "${{ inputs.folder }}" -o dist && ls -l dist
+        run: |
+          edugame build "${{ inputs.folder }}" -o dist
+          if [ "${{ inputs.each-language }}" = "true" ]; then edugame build "${{ inputs.folder }}" -o dist --each-language; fi
+          ls -l dist
       - uses: actions/upload-artifact@v7
         with:
           name: game-zips
@@ -74,6 +92,30 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh release upload "$GITHUB_REF_NAME" dist/*.zip --clobber
+
+  # The game's own browser tests, with this release of the kit, Playwright and Chromium. Anything
+  # they put in screenshots/ is in the run's Artifacts (browser-screenshots).
+  browser:
+    name: Browser
+    if: inputs.browser-tests != ''
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.11"
+      - name: Install EduGame Kit and a browser
+        run: |
+          pip install playwright "${KIT:-edugame-kit @ git+https://github.com/togetherings/edugame-kit@$KIT_REF}"
+          python -m playwright install --with-deps chromium
+      - name: The game's browser tests
+        run: ${{ inputs.browser-tests }}
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: browser-screenshots
+          path: screenshots
+          if-no-files-found: ignore
 
   # Adds the zip to a channel in a real Kolibri and plays it in Learn as a learner: the game
   # must save through Kolibri's SCORM connection and carry on after the learner leaves.
@@ -92,7 +134,7 @@ jobs:
           python -m playwright install --with-deps chromium
           echo "::notice title=Kolibri version::$(python -c 'import kolibri; print(kolibri.__version__)')"
       - name: Play the game in Kolibri
-        run: edugame kolibri-test "${{ inputs.folder }}" --screenshots kolibri-screenshots
+        run: edugame kolibri-test "${{ inputs.folder }}" --packages "${{ inputs.kolibri-packages }}" --screenshots kolibri-screenshots
       - uses: actions/upload-artifact@v7
         if: always()
         with:
