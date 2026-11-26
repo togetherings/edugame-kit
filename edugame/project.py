@@ -130,6 +130,16 @@ class Project(object):
                 return plain(v)
         return default
 
+    @property
+    def menu(self):
+        """pages.menu from edugame.json (the site's menu page), or None."""
+        return (self.data.get("pages") or {}).get("menu")
+
+    def menu_files(self):
+        """Patterns of the files only the site's menu uses (its page too): left out of every zip."""
+        m = self.menu
+        return [m["page"]] + list(m.get("files", [])) if m else []
+
     def packages(self):
         """The game's packages ([] when it's built as one zip)."""
         return self.data.get("packages", [])
@@ -220,6 +230,8 @@ class Project(object):
                 if only and matches(rel, only) and not (self.package and matches(rel, self.package.get("files", []))):
                     continue
                 if matches(rel, self.data.get("exclude", [])):
+                    continue
+                if self.menu and matches(rel, self.menu_files()) and not getattr(self, "for_menu", False):
                     continue
                 if self.package and matches(rel, self.package.get("exclude", [])):
                     continue
@@ -349,9 +361,7 @@ def load(folder):
             if script not in page:
                 problems.append('%s must load %s: <script src="%s"></script>' % (entry, script, script))
     _check_more(data, folder, problems, languages)
-    pages_cfg = data.get("pages", {})
-    if not isinstance(pages_cfg, dict) or not isinstance(pages_cfg.get("goatcounter", ""), str):
-        problems.append('pages must be {"goatcounter": "your-code"} (for the GitHub Pages site only).')
+    _check_pages(data, folder, problems)
     for name in GENERATED:
         if os.path.exists(os.path.join(folder, name)):
             problems.append("Remove %s from the game folder: the build makes it." % name)
@@ -450,6 +460,42 @@ def _check_more(data, folder, problems, languages):
             problems.append("%s.languages must be some of the game's languages." % where)
         if "config" in p and not isinstance(p["config"], dict):
             problems.append("%s.config must be an object." % where)
+
+
+MENU_NAME_RE = re.compile(r"^[a-z0-9][a-z0-9-]{0,39}$")
+
+
+def _check_pages(data, folder, problems):
+    """The pages section: {"goatcounter": "code", "menu": {"page": "menu.html", "files": [...], "offline": "all-lessons"}}."""
+    cfg = data.get("pages", {})
+    if not isinstance(cfg, dict) or not isinstance(cfg.get("goatcounter", ""), str) \
+            or [k for k in cfg if k not in ("goatcounter", "menu")]:
+        problems.append('pages must be like {"goatcounter": "your-code", "menu": {"page": "menu.html"}} (for the site only).')
+        return
+    menu = cfg.get("menu")
+    if menu is None:
+        return
+    if not isinstance(menu, dict) or [k for k in menu if k not in ("page", "files", "offline")]:
+        problems.append('pages.menu must be like {"page": "menu.html", "files": ["js/menu.js"], "offline": "all-lessons"}.')
+        return
+    if not data.get("packages"):
+        problems.append("pages.menu is for games with packages: the menu lists them.")
+    page = menu.get("page")
+    if not isinstance(page, str) or "/" in page or not page.endswith(".html"):
+        problems.append("pages.menu.page must be an .html file at the top of the game folder, like menu.html.")
+    elif not os.path.isfile(os.path.join(folder, page)):
+        problems.append("pages.menu.page: %s isn't in the game folder." % page)
+    else:
+        with open(os.path.join(folder, page), encoding="utf-8", errors="replace") as f:
+            text = f.read()
+        for script in ("edugame-config.js", "edugame.js"):
+            if script not in text:
+                problems.append('%s must load %s: <script src="%s"></script>' % (page, script, script))
+    files = menu.get("files", [])
+    if not isinstance(files, list) or not all(isinstance(x, str) for x in files):
+        problems.append('pages.menu.files must list file patterns only the menu uses, like ["js/menu.js"].')
+    if "offline" in menu and not (isinstance(menu["offline"], str) and MENU_NAME_RE.match(menu["offline"])):
+        problems.append('pages.menu.offline names the offline copy\'s zip, like "all-lessons" (lower-case letters, digits and -).')
 
 
 def missing_strings(project):

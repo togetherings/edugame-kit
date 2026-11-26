@@ -60,6 +60,10 @@ EduGame.loadLanguage("maps/us/lang");            // the current language's words
 EduGame.loadLanguage("lessons/01", { merge: false });  // the nearest language's edition
 EduGame.config.package;                          // {id, title, config} in a package's build
 
+// A site with a menu (see platforms/GITHUB_PAGES.md): null in a zip
+EduGame.site();                 // {language, package, home, next, languages: [...], packages: [...]}
+EduGame.goTo(EduGame.site().next);   // another page of the site (also in its one-page offline copy)
+
 // Only do something on the Kolibri Games games page (safe to call anywhere):
 EduGame.move("guess", { value: 42 });   // coaches see every move
 EduGame.scoreboard({ board: "en-02" }); // Promise of {rows: [...], board, boards}, or null elsewhere
