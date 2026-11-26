@@ -57,6 +57,15 @@
  *   EduGame.theme(), EduGame.setTheme("dark")
  *   EduGame.on("languagechange" | "themechange" | "optionchange", fn)
  *
+ * A site of pages (edugame pages, for a game with packages and a menu page: docs/platforms/GITHUB_PAGES.md).
+ * Each page is one package (or the menu) in one language, at its own address.
+ *
+ *   EduGame.site()              null in a zip; on a site page {language, package, home, next,
+ *                               languages: [{code, name, url, packages}], packages: [{id, title,
+ *                               description, url, config}]}. The header gets a link to the menu
+ *                               (the word kit.menu), and Options changes language by going to
+ *                               the same package (or the menu) in that language.
+ *
  * Content (maps, lessons, word lists: the folders under "content" in edugame.json).
  *
  *   EduGame.load("words/fr.json")          -> Promise of the data, or null
@@ -135,7 +144,7 @@
     en: { "kit.options": "Options", "kit.options_title": "Options", "kit.appearance": "Appearance",
           "kit.theme_light": "Light", "kit.theme_dark": "Dark", "kit.theme_auto": "Auto",
           "kit.theme_auto_hint": "(follows this device's light or dark setting)", "kit.language": "Language",
-          "kit.apply": "Apply", "kit.back": "Back",
+          "kit.apply": "Apply", "kit.back": "Back", "kit.menu": "Menu",
           "kit.save_problem_title": "Your progress couldn't be loaded",
           "kit.save_unreadable": "Your saved progress is damaged, so this game can't read it. It's kept as it is until you choose to start over.",
           "kit.save_newer": "Your progress was saved by a newer version of this game. Play it on a device that has the newer version, or ask your teacher to update it.",
@@ -143,7 +152,7 @@
     fr: { "kit.options": "Options", "kit.options_title": "Options", "kit.appearance": "Apparence",
           "kit.theme_light": "Clair", "kit.theme_dark": "Sombre", "kit.theme_auto": "Auto",
           "kit.theme_auto_hint": "(suit le réglage clair ou sombre de cet appareil)", "kit.language": "Langue",
-          "kit.apply": "Appliquer", "kit.back": "Retour",
+          "kit.apply": "Appliquer", "kit.back": "Retour", "kit.menu": "Menu",
           "kit.save_problem_title": "Ta progression n'a pas pu être chargée",
           "kit.save_unreadable": "Ta progression enregistrée est abîmée, alors ce jeu ne peut pas la lire. Elle est gardée telle quelle jusqu'à ce que tu choisisses de recommencer.",
           "kit.save_newer": "Ta progression a été enregistrée par une version plus récente de ce jeu. Joue sur un appareil qui a la nouvelle version, ou demande à ton enseignant de le mettre à jour.",
@@ -151,11 +160,11 @@
     es: { "kit.options": "Opciones", "kit.options_title": "Opciones", "kit.appearance": "Apariencia",
           "kit.theme_light": "Claro", "kit.theme_dark": "Oscuro", "kit.theme_auto": "Automático",
           "kit.theme_auto_hint": "(sigue el ajuste claro u oscuro de este dispositivo)", "kit.language": "Idioma",
-          "kit.apply": "Aplicar", "kit.back": "Volver" },
+          "kit.apply": "Aplicar", "kit.back": "Volver", "kit.menu": "Menú" },
     pt: { "kit.options": "Opções", "kit.options_title": "Opções", "kit.appearance": "Aparência",
           "kit.theme_light": "Claro", "kit.theme_dark": "Escuro", "kit.theme_auto": "Automático",
           "kit.theme_auto_hint": "(segue a configuração clara ou escura deste dispositivo)", "kit.language": "Idioma",
-          "kit.apply": "Aplicar", "kit.back": "Voltar" }
+          "kit.apply": "Aplicar", "kit.back": "Voltar", "kit.menu": "Menu" }
   };
 
   function cleanLanguage(code) {
@@ -785,6 +794,33 @@
   // The page gets data-theme="light" or "dark" on <html>; style both with CSS variables.
 
   var OPTIONS = config.options || {};
+
+  // ---------------------------------------------------------------- a site
+  // On a site made by "edugame pages" for a game with a menu, each page is one package
+  // (or the menu) in one language. config.site says where the other pages are.
+  var SITE = config.site || null;
+
+  /** Go to another page of the site. In the one-page offline copy, pages are #addresses. */
+  function goTo(url) {
+    if (SITE && SITE.mode === "hash" && url.charAt(0) === "#") {
+      if (location.hash === url) location.reload();
+      else location.hash = url;   // the hashchange below loads it
+    } else {
+      location.href = url;
+    }
+  }
+
+  if (SITE && SITE.mode === "hash") window.addEventListener("hashchange", function () { location.reload(); });
+
+  /** Options' language on a site: remember the choice, then go to that language's page. */
+  function goToLanguage(code) {
+    var to = null;
+    SITE.languages.forEach(function (l) { if (l.code === code) to = l; });
+    if (!to) return;
+    try { window.localStorage.setItem(LANG_KEY, code); } catch (e) { /* storage blocked */ }
+    var go = function () { goTo(to.url); };
+    ready().then(function () { record._lang = code; return writeRecord(); }).then(go, go);
+  }
   var THEME_KEY = "edugame:" + config.id + ":theme";
   var THEMES = ["light", "dark", "auto"];
   var darkQuery = null;
@@ -878,8 +914,12 @@
     ".eg-header .eg-title{margin:0;font-size:1.25rem;line-height:1.3;font-weight:700}",
     ".eg-header.eg-no-title{justify-content:flex-end;border-bottom:0;padding-bottom:0}",
     ".eg-header.eg-no-title .eg-title{display:none}",
-    ".eg-options-button{font:inherit;cursor:pointer;padding:.35rem .9rem;border-radius:8px;",
+    ".eg-options-button,.eg-menu-link{font:inherit;cursor:pointer;padding:.35rem .9rem;border-radius:8px;",
     "border:2px solid var(--eg-accent);background:transparent;color:inherit}",
+    ".eg-menu-link{text-decoration:none;display:inline-block}",
+    ".eg-menu-link:before{content:'\\2039\\00a0'}",
+    ".eg-header .eg-menu-link+.eg-title{flex:1}",
+    ".eg-menu-link:focus-visible{outline:3px solid var(--eg-accent);outline-offset:2px}",
     ".eg-options-button:focus-visible,.eg-card button:focus-visible,.eg-card input:focus-visible{outline:3px solid var(--eg-accent);outline-offset:2px}",
     ".eg-overlay{position:fixed;inset:0;z-index:2147483000;display:flex;align-items:flex-start;justify-content:center;",
     "padding:5vh 16px;background:rgba(0,0,0,.45);overflow:auto}",
@@ -920,7 +960,9 @@
   function addHeader() {
     addStyle();
     if (OPTIONS.header === false || document.querySelector(".eg-header")) return;
+    var menu = SITE && SITE.package ? make("a", { className: "eg-menu-link", href: SITE.home, "data-t": "kit.menu", text: t("kit.menu") }) : null;
     var header = make("header", { className: "eg-header" + (looksLikeKolibriGames() ? " eg-no-title" : "") }, [
+      menu,
       make("h1", { className: "eg-title", "data-t": titleKey(), text: t(titleKey()) }),
       make("button", { type: "button", className: "eg-options-button", "data-edugame-options": "", "data-t": "kit.options", text: t("kit.options") })
     ]);
@@ -968,9 +1010,10 @@
       { value: "auto", label: t("kit.theme_auto"), hint: t("kit.theme_auto_hint") }
     ], before.theme, function (v) { setTheme(v, false); picked.theme = v; })));
 
-    var langs = languages();
+    var langs = SITE ? SITE.languages.map(function (l) { return { code: l.code, name: l.name, dir: about(l.code).dir }; }) : languages();
+    if (SITE) picked.language = before.language = SITE.language;
     var language = make("fieldset", {}, [make("legend", { text: t("kit.language") })].concat(langs.length > 1
-      ? radios("eg-language", langs.map(function (l) { return { value: l.code, label: l.name }; }), current,
+      ? radios("eg-language", langs.map(function (l) { return { value: l.code, label: l.name }; }), picked.language,
                function (v) { picked.language = v; })
       : [make("p", { text: about(current).name })]));
     langs.forEach(function (l, i) {   // each language name is written in that language
@@ -1023,7 +1066,8 @@
       gameOptions.forEach(function (o) { if (picked["opt:" + o.key] !== undefined) setOption(o.key, picked["opt:" + o.key]); });
       var changed = picked.language !== before.language;
       close();
-      if (changed) setLanguage(picked.language);
+      if (changed && SITE) goToLanguage(picked.language);
+      else if (changed) setLanguage(picked.language);
     });
     back.addEventListener("click", cancel);
     panel.addEventListener("click", function (e) { if (e.target === panel) cancel(); });
@@ -1292,6 +1336,9 @@
     language: function () { return current; },
     languages: languages,
     setLanguage: setLanguage,
+    // a site of pages
+    site: function () { return SITE; },
+    goTo: goTo,
     // appearance and options
     theme: theme,
     setTheme: setTheme,

@@ -13,7 +13,8 @@
 #   * Build: the game's own tests (the "tests" input), edugame check, edugame build. The zips
 #     are in the run's Artifacts (game-zips); on a published release they're attached to it.
 #   * Releases get the zips, or with "release-bundles" (games with packages) a few bundles of them:
-#     one with every language and one for each language (edugame bundle).
+#     one with every language and one for each language (edugame bundle), and with a menu page
+#     (pages.menu) the offline copy of the site.
 #   * Browser: the game's own browser tests (the "browser-tests" input), if it has any.
 #   * Real Kolibri: edugame kolibri-test, with the game's tests/kolibri_play.py. A game with
 #     packages (one zip per lesson, map or level pack) is played as each package's zip: all of
@@ -41,7 +42,7 @@ on:
         type: boolean
         default: false
       release-bundles:
-        description: For a game with packages, a release gets bundles (edugame bundle) instead of every package's zip - one with every language, and one for each language
+        description: For a game with packages, a release gets bundles (edugame bundle) instead of every package's zip - one with every language, one for each language, and with a menu page the offline copy of the site
         type: boolean
         default: false
       kolibri:
@@ -60,7 +61,7 @@ on:
 env:
   # This release of the kit. Always v + __version__ in edugame/__init__.py (a test checks), so a
   # game calling game.yml@vX.Y.Z builds with kit X.Y.Z. tools/bump_version.py changes it.
-  KIT_REF: v0.3.4
+  KIT_REF: v0.3.5
   KIT: ${{ inputs.kit }}
 
 jobs:

@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.3.5
+
+### What games need to do
+
+- Nothing. A game with packages can now have a site with its own menu page, and each package in
+  each language at its own address (docs/platforms/GITHUB_PAGES.md, "A site with a menu").
+
+### Changes
+
+- **A site with a menu, for games with packages.** With `"pages": {"menu": {"page": "menu.html"}}`
+  in `edugame.json`, `edugame pages` makes the menu in each language (`/en/`), each package in each
+  language (`/en/lesson-03/`, `/en-gb/lesson-03/`), a bare address that goes to the menu in the
+  visitor's language, and redirects from the old `play/<package>/` addresses. The menu page and the
+  files it alone uses (`files`) are never in a zip.
+- **The offline copy of the site**: `edugame bundle` also makes `<game>-<offline>-<version>.zip`
+  (`"offline": "all-lessons"`), one page that shows every package at `#en/lesson-03`, since pages
+  opened from a folder can't share a save in every browser. `release-bundles` attaches it.
+- **The helper on a site's pages**: `EduGame.site()` (where the other pages are; `null` in a zip)
+  and `EduGame.goTo(url)`. The header gets a link back to the menu (the word `kit.menu`), Options'
+  language goes to the same package (or the menu) in that language, and each page has its own title.
+- **Tests**: `tests/test_site.py`, and the browser test plays a site and its offline copy.
+
 ## 0.3.4
 
 ### What games need to do

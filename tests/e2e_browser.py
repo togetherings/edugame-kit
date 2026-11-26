@@ -5,6 +5,7 @@ Plays the example games in Chromium, the way each platform runs them:
 * in the test page as a website (RACHEL, Kiwix: saves in the browser)
 * in French, with ?lang=fr, and with the kit's Options panel
 * on the Kolibri Games games page (when kolibri-games is installed)
+* as a site of pages with a menu (edugame pages with pages.menu), and its offline copy from a folder
 
     python -m tests.e2e_browser [--screenshots DIR]
 
@@ -13,11 +14,12 @@ Needs Playwright (pip install playwright; playwright install chromium).
 import argparse
 import json
 import os
+import re
 import sys
 import tempfile
 import threading
 
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import expect, sync_playwright
 
 from edugame import build, cli, kolibri_test, project as projects
 from tests.helpers import EXAMPLES, TEMPLATES
@@ -298,6 +300,89 @@ def check_pages_counting(browser, shots):
         server.shutdown()
 
 
+def check_site(browser, shots):
+    """A game with packages and a menu: each page at its own address, Options going to the other language's page,
+    the header's link back to the menu, and the offline copy opened from a folder (file://)."""
+    import functools
+    import shutil
+    import zipfile
+    from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
+
+    from edugame import pages
+    from tests.test_site import with_menu
+
+    work = tempfile.mkdtemp(prefix="edugame-site-")
+    p = projects.load(with_menu(__import__("pathlib").Path(work), offline="all-lessons"))
+    pages.build_pages(p, os.path.join(work, "root", "game"))
+
+    class Quiet(SimpleHTTPRequestHandler):
+        def log_message(self, *a):
+            pass
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), functools.partial(Quiet, directory=os.path.join(work, "root")))
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    base = "http://127.0.0.1:%d/game/" % server.server_address[1]
+    errors = []
+    try:
+        context = browser.new_context(locale="fr-FR", viewport={"width": 900, "height": 700})
+        page = context.new_page()
+        page.on("pageerror", lambda e: errors.append(str(e)))
+        page.goto(base)                                         # the visitor's language: French
+        page.wait_for_url("**/game/fr/")
+        page.locator("a.pkg").first.wait_for()
+        assert page.locator("a.pkg").all_inner_texts() == ["Leçon un", "Leçon deux"]
+        assert page.locator(".eg-menu-link").count() == 0      # no link to the menu on the menu
+        page.locator("a.pkg").nth(1).click()
+        page.wait_for_url("**/game/fr/lesson-02/")
+        assert page.title() == "Leçon deux"
+        page.locator(".eg-options-button").click()             # English has no lesson 2: its menu
+        page.locator("input[name=eg-language][value=en]").check()
+        page.locator(".eg-actions .eg-primary").click()
+        page.wait_for_url("**/game/en/")
+        page.locator("a.pkg").first.click()
+        page.wait_for_url("**/game/en/lesson-01/")
+        if shots:
+            page.screenshot(path=os.path.join(shots, "6-site-page.png"))
+        page.locator(".eg-options-button").click()             # French has lesson 1: the same lesson
+        page.locator("input[name=eg-language][value=fr]").check()
+        page.locator(".eg-actions .eg-primary").click()
+        page.wait_for_url("**/game/fr/lesson-01/")
+        page.locator(".eg-menu-link").click()
+        page.wait_for_url("**/game/fr/")
+        page.goto(base + "play/lesson-01/?lang=en")            # an old address, with an old link's language
+        page.wait_for_url("**/game/en/lesson-01/")
+        page.goto(base)                                        # the last choice in Options comes first
+        page.wait_for_url("**/game/fr/")
+        context.close()
+
+        # The offline copy, from a folder: one page, every page at a #address.
+        folder = os.path.join(work, "offline")
+        zipfile.ZipFile(pages.offline_zip(p, work)).extractall(folder)
+        context = browser.new_context(locale="en-US")
+        page = context.new_page()
+        page.on("pageerror", lambda e: errors.append(str(e)))
+        page.goto("file://" + os.path.join(folder, "index.html"))
+        page.locator("a.pkg").first.wait_for()
+        assert page.url.endswith("#en"), page.url
+        page.locator("a.pkg").first.click()
+        expect(page).to_have_url(re.compile("#en/lesson-01$"))
+        expect(page).to_have_title("Lesson one")
+        page.locator(".eg-menu-link").wait_for()
+        page.locator(".eg-options-button").click()
+        page.locator("input[name=eg-language][value=fr]").check()
+        page.locator(".eg-actions .eg-primary").click()
+        expect(page).to_have_url(re.compile("#fr/lesson-01$"))     # the page loads again, in French
+        expect(page).to_have_title("Leçon un")
+        page.locator("html[lang=fr] .eg-menu-link").wait_for()
+        page.locator(".eg-menu-link").click()
+        page.locator("a.pkg >> nth=1").wait_for()
+        context.close()
+        assert not errors, errors
+    finally:
+        server.shutdown()
+        shutil.rmtree(work, ignore_errors=True)
+
+
 def check_kolibri_games(browser, shots):
     """The same games on the Kolibri Games games page, through the plugin's SDK."""
     try:
@@ -430,6 +515,7 @@ def main():
             for folder in (SAVED, os.path.join(TEMPLATES, "scored"), NUMBER_HUNT):
                 check_play_steps(browser, folder, None)
             check_pages_counting(browser, shots)
+            check_site(browser, shots)
             check_kolibri_games(browser, shots)
             browser.close()
     finally:

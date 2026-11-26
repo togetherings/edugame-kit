@@ -17,6 +17,21 @@ environment variable (the workflow sets it from a repository variable), or
 With counting on, each page view is counted (GoatCounter sees the path, like
 /my-game/play/), and so are rounds: the save helper announces "edugame:start"
 and "edugame:finish" on the page, and the script here counts them as events.
+
+A game with packages and a menu page (``"pages": {"menu": {"page": "menu.html"}}``)
+gets a site of its own instead (docs/platforms/GITHUB_PAGES.md): each package in each language at
+its own address, and the game's menu for each language.
+
+    site/
+      index.html            goes to the menu in the visitor's language
+      en/index.html         the menu in English (the game's menu page)
+      en/lesson-03/         a package in English
+      en-gb/lesson-03/      the same package in British English
+      play/lesson-03/       old addresses: go to the new one
+
+The same pages also come as one offline copy (``offline_zip``): a single
+index.html that shows each page at #en/lesson-03, since pages opened from a
+folder (file://) can't share a save in every browser.
 """
 import json
 import os
@@ -176,13 +191,17 @@ def _site_game(project, folder, counter):
 def build_pages(project, target, goatcounter=None, repo=None, events=True):
     """Write the site into ``target`` (emptied first). Returns the GoatCounter code used, or None.
 
-    A game with packages gets each one at play/<package id>/, listed on the front page.
+    A game with packages gets each one at play/<package id>/, listed on the front page; with a menu
+    page (pages.menu), a site of pages instead (build_site).
     """
     code = goatcounter_code(project, goatcounter)
     counter = tracker(code, events) if code else ""
     if os.path.isdir(target):
         shutil.rmtree(target)
     os.makedirs(target)
+    if project.menu and project.packages():
+        build_site(project, target, counter)
+        return code
     play = os.path.join(target, "play")
     packages = []
     if project.packages():
@@ -199,3 +218,256 @@ def build_pages(project, target, goatcounter=None, repo=None, events=True):
         json.dump({"game": project.id, "version": project.version, "goatcounter": bool(code),
                    "packages": [folder for _, folder in packages]}, f)
     return code
+
+
+# ------------------------------------------------------------------ a site with a menu
+
+PLATFORM_FILES = ("imsmanifest.xml", "rachel-index.php", "kolibri-game.json")
+
+
+def address(code):
+    """A language's part of the address: its code in lower case (en-GB -> en-gb)."""
+    return code.lower()
+
+
+def site_plan(project, languages=None):
+    """The site's pages: {language: [package, ...]}, in the game's order, for the languages asked for."""
+    codes = list(languages) if languages else list(project.languages)
+    unknown = [c for c in codes if c not in project.languages]
+    if unknown:
+        raise ValueError("This game isn't in %s (it's in %s)." % (", ".join(unknown), ", ".join(project.languages)))
+    return [(code, [p for p in project.packages() if not p.get("languages") or code in p["languages"]]) for code in codes]
+
+
+def _page_path(code, pkg=None):
+    return address(code) + "/" + (pkg["id"] + "/" if pkg else "")
+
+
+def site_config(project, plan, code, pkg, mode):
+    """config.site for one page: where the other pages are (relative addresses, or #addresses offline)."""
+    depth = 2 if pkg else 1
+
+    def url(to_code, to_pkg=None):
+        if mode == "hash":
+            return "#" + address(to_code) + ("/" + to_pkg["id"] if to_pkg else "")
+        return "../" * depth + _page_path(to_code, to_pkg)
+
+    mine = dict(plan)[code]
+    langs = []
+    for other, pkgs in plan:
+        same = pkg and next((p for p in pkgs if p["id"] == pkg["id"]), None)
+        langs.append({"code": other, "name": _language_name(project, other), "url": url(other, same),
+                      "packages": len(pkgs)})
+    listed = []
+    for p in mine:
+        v = project.variant(p["id"], [code])
+        listed.append({"id": p["id"], "title": v.title, "description": v.description, "url": url(code, p),
+                       "config": p.get("config", {})})
+    nxt = None
+    if pkg:
+        ids = [p["id"] for p in mine]
+        at = ids.index(pkg["id"])
+        if at + 1 < len(mine):
+            nxt = url(code, mine[at + 1])
+    return {"mode": mode, "language": code, "address": address(code), "package": pkg["id"] if pkg else None,
+            "home": url(code), "next": nxt, "languages": langs, "packages": listed}
+
+
+def _page_variant(project, code, pkg):
+    if pkg:
+        return project.variant(pkg["id"], [code])
+    v = project.variant(None, [code])
+    v.for_menu = True
+    return v
+
+
+def _write(path, data):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "wb") as f:
+        f.write(data)
+
+
+#: Picks the visitor's language: ?lang=, their last choice on the site, the browser's languages, the default.
+#: SITE = {id, languages: [{code, address, packages: [ids]}]}. Old style ES5, like the helper.
+CHOOSER = r"""
+function egChoose(SITE) {
+  var langs = SITE.languages, i, j;
+  function low(c) { return String(c || "").replace(/_/g, "-").toLowerCase(); }
+  function base(c) { return low(c).split("-")[0]; }
+  function match(w) {
+    w = low(w);
+    if (!w) return null;
+    for (i = 0; i < langs.length; i++) if (low(langs[i].code) === w || langs[i].address === w) return langs[i];
+    for (j = 0; j < langs.length; j++) if (low(langs[j].code) === base(w)) return langs[j];
+    for (j = 0; j < langs.length; j++) if (base(langs[j].code) === base(w)) return langs[j];
+    return null;
+  }
+  var stored = null;
+  try { stored = window.localStorage.getItem("edugame:" + SITE.id + ":language"); } catch (e) { /* storage blocked */ }
+  var m = /[?&]lang=([A-Za-z0-9_-]+)/.exec(location.search);
+  var tries = [m && m[1], stored].concat(navigator.languages || [navigator.language]);
+  for (var k = 0; k < tries.length; k++) { var found = match(tries[k]); if (found) return found; }
+  return langs[0];
+}
+function egHas(lang, pkg) {
+  for (var i = 0; i < lang.packages.length; i++) if (lang.packages[i] === pkg) return true;
+  return false;
+}
+"""
+
+
+def _chooser_data(project, plan):
+    return {"id": project.id, "languages": [{"code": c, "address": address(c), "packages": [p["id"] for p in pkgs]}
+                                           for c, pkgs in plan]}
+
+
+def _redirect_page(title, script, fallback):
+    return """<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>%s</title>
+<script>%s</script>
+</head>
+<body>
+<p><a href="%s">%s</a></p>
+</body>
+</html>
+""" % (escape(title), script, escape(fallback), escape(title))
+
+
+def build_site(project, target, counter="", languages=None):
+    """The site of pages, written into ``target`` (which must be empty or missing)."""
+    plan = site_plan(project, languages)
+    made = []
+    for code, pkgs in plan:
+        for pkg in [None] + pkgs:
+            v = _page_variant(project, code, pkg)
+            folder = os.path.join(target, *_page_path(code, pkg).strip("/").split("/"))
+            if os.path.isdir(folder):
+                shutil.rmtree(folder)
+            for name, data in build.entries(v, site=site_config(project, plan, code, pkg, "pages")):
+                if name in PLATFORM_FILES:
+                    continue
+                _write(os.path.join(folder, *name.split("/")), data)
+            entry = os.path.join(folder, *project.entry.split("/"))
+            if not pkg:
+                # The menu: the game's menu page is this folder's index.html.
+                shutil.move(os.path.join(folder, project.menu["page"]), os.path.join(folder, "index.html"))
+                if project.entry != "index.html" and os.path.exists(entry):
+                    os.remove(entry)
+                entry = os.path.join(folder, "index.html")
+            if counter:
+                with open(entry, encoding="utf-8") as f:
+                    html = f.read()
+                with open(entry, "w", encoding="utf-8") as f:
+                    f.write(_inject(html, counter))
+            made.append(_page_path(code, pkg))
+    data = json.dumps(_chooser_data(project, plan))
+    # The bare address: the menu in the visitor's language (old links with ?p=<package> go to that package).
+    root = (CHOOSER + "var SITE = %s; var lang = egChoose(SITE);\n"
+            "var p = /[?&]p=([a-z0-9-]+)/.exec(location.search);\n"
+            "location.replace(lang.address + '/' + (p && egHas(lang, p[1]) ? p[1] + '/' : '') + location.hash);\n" % data)
+    _write(os.path.join(target, "index.html"), _redirect_page(project.title, root, address(plan[0][0]) + "/").encode("utf-8"))
+    # Old addresses (play/<package>/, before the menu): to the package in the visitor's language.
+    for pkg in project.packages():
+        script = "location.replace('../../?p=%s' + location.search.replace(/^\\?/, '&'));" % pkg["id"]
+        _write(os.path.join(target, "play", pkg["id"], "index.html"),
+               _redirect_page(project.title, script, "../../").encode("utf-8"))
+    open(os.path.join(target, ".nojekyll"), "w").close()
+    with open(os.path.join(target, "site.json"), "w", encoding="utf-8") as f:
+        json.dump({"game": project.id, "version": project.version, "goatcounter": bool(counter),
+                   "languages": {c: address(c) for c, _ in plan}, "pages": made}, f)
+    return made
+
+
+def _script_src(html, name, new):
+    """Point the page's <script src="name"> at ``new``."""
+    out, n = re.subn(r"""(<script[^>]*\ssrc=["'])%s(["'])""" % re.escape(name), r"\g<1>%s\g<2>" % new, html)
+    if not n:
+        raise ValueError("The page doesn't load %s with a <script src> tag." % name)
+    return out
+
+
+def offline_name(project):
+    return "%s-%s-%s.zip" % (project.slug, project.menu.get("offline") or "all", project.version)
+
+
+def offline_entries(project, languages=None):
+    """The offline copy: [(name, bytes)]. One index.html shows every page, chosen by #address:
+    #en (the menu in English), #en/lesson-03 (a package). Every page's files are in one folder."""
+    plan = site_plan(project, languages)
+    files = {}
+    configs = {}
+    helper = None
+    for code, pkgs in plan:
+        for pkg in [None] + pkgs:
+            v = _page_variant(project, code, pkg)
+            key = address(code) + ("/" + pkg["id"] if pkg else "")
+            for name, data in build.entries(v, site=site_config(project, plan, code, pkg, "hash")):
+                if name in PLATFORM_FILES:
+                    continue
+                if name == "edugame-config.js":
+                    configs[key] = data
+                elif name == "edugame.js":
+                    helper = data
+                elif name in (project.entry, project.menu["page"]):
+                    continue   # the pages themselves are in site/pages.js
+                else:
+                    files[name] = data
+    out = []
+    names = {}
+    for i, key in enumerate(sorted(configs)):
+        names[key] = "site/page-%d.js" % i
+        out.append((names[key], configs[key]))
+    with open(os.path.join(project.folder, project.entry), encoding="utf-8") as f:
+        game = f.read()
+    with open(os.path.join(project.folder, project.menu["page"]), encoding="utf-8") as f:
+        menu = f.read()
+    data = _chooser_data(project, plan)
+    data.update({"configs": names, "game": _script_src(game, "edugame-config.js", "{config}"),
+                 "menu": _script_src(menu, "edugame-config.js", "{config}")})
+    router = CHOOSER + r"""
+(function () {
+  var SITE = window.EDUGAME_SITE;
+  var parts = location.hash.replace(/^#/, "").split("/");
+  var lang = null, i;
+  for (i = 0; i < SITE.languages.length; i++) if (SITE.languages[i].address === parts[0]) lang = SITE.languages[i];
+  if (!lang) lang = egChoose(SITE);
+  var pkg = parts[1] && egHas(lang, parts[1]) ? parts[1] : null;
+  var key = lang.address + (pkg ? "/" + pkg : "");
+  if (location.hash !== "#" + key) location.replace("#" + key);
+  var page = (pkg ? SITE.game : SITE.menu).replace("{config}", SITE.configs[key]);
+  document.write(page);
+})();
+"""
+    out.append(("site/pages.js", ("/* Made by EduGame Kit: every page of the offline copy. */\nwindow.EDUGAME_SITE = %s;\n"
+                                  % json.dumps(data, ensure_ascii=False)).encode("utf-8")))
+    out.append(("site/router.js", router.encode("utf-8")))
+    index = """<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="site/pages.js"></script>
+<script src="site/router.js"></script>
+</head>
+<body>
+<noscript>%s needs JavaScript.</noscript>
+</body>
+</html>
+""" % escape(project.title)
+    out.append(("index.html", index.encode("utf-8")))
+    out.append(("edugame.js", helper))
+    readme = ("%s %s\n\nOpen index.html in a web browser to play: it works without the internet.\n"
+              "Results are kept in that browser. Keep all these files together.\n" % (project.title, project.version))
+    out.append(("README.txt", readme.encode("utf-8")))
+    out += sorted(files.items())
+    return out
+
+
+def offline_zip(project, out_dir, languages=None):
+    """<game>-<offline>-<version>.zip, the offline copy of the site. Returns its path."""
+    path = os.path.join(out_dir, offline_name(project))
+    return build._write_zip(path, offline_entries(project, languages))

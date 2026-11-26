@@ -117,6 +117,8 @@ def cmd_bundle(args):
         print("%s has no packages: its zip is the whole game, so there's nothing to bundle." % p.title, file=sys.stderr)
     try:
         made = build.build_bundles(p, args.out_dir, languages=_languages(args))
+        if p.menu and p.packages():
+            made.append(pages.offline_zip(p, args.out_dir, languages=_languages(args)))
     except (projects.ProjectError, ValueError) as e:
         sys.exit(str(e))
     for path in made:
@@ -313,7 +315,8 @@ def main(argv=None):
     p.add_argument("--each-language", action="store_true", help="one zip per language, instead of one with every language")
     p.set_defaults(func=cmd_build)
 
-    p = sub.add_parser("bundle", help="for a game with packages: a zip of every package's zip, and one for each language")
+    p = sub.add_parser("bundle", help="for a game with packages: a zip of every package's zip, one for each language "
+                                      "and, with a menu page, the offline copy of the site")
     p.add_argument("folder")
     p.add_argument("-o", "--out-dir", default="bundles")
     p.add_argument("--lang", help="only these languages, like fr or fr,en")
