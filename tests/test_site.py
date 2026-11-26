@@ -185,3 +185,35 @@ def test_a_site_built_inside_the_game_never_ends_up_in_its_pages(tmp_path):
         if out == "web":
             import shutil
             shutil.rmtree(site)
+
+
+def test_links_to_the_release_and_the_code_with_a_repo(tmp_path):
+    p = projects.load(with_menu(tmp_path, offline="all-lessons"))
+    site = str(tmp_path / "site")
+    pages.build_pages(p, site, repo="owner/game")
+    links = config_of(os.path.join(site, "en", "edugame-config.js"))["site"]["links"]
+    assert links == {"release": "https://github.com/owner/game/releases/latest", "code": "https://github.com/owner/game",
+                     "offline": "my-game-all-lessons-0.1.0.zip"}
+    pages.build_pages(p, site)
+    assert config_of(os.path.join(site, "en", "edugame-config.js"))["site"]["links"]["release"] is None
+
+
+def test_the_starter_menu(tmp_path, capsys):
+    folder = packaged(tmp_path)
+    cli.main(["menu", folder])
+    for name in ("menu.html", "menu/menu.js", "menu/menu.css"):
+        assert os.path.exists(os.path.join(folder, name)), name
+    p = projects.load(folder)
+    assert p.menu == {"page": "menu.html", "files": ["menu/*"], "offline": "all"}
+    for path in build.build_all(p, str(tmp_path / "dist")):
+        assert not [n for n in zipfile.ZipFile(path).namelist() if n.startswith("menu")]
+    site = str(tmp_path / "site")
+    pages.build_pages(p, site, repo="owner/game")
+    assert os.path.exists(os.path.join(site, "fr", "menu", "menu.js"))
+    with open(os.path.join(site, "fr", "index.html"), encoding="utf-8") as f:
+        assert 'data-eg="get"' in f.read()
+    try:                                                         # never over a game's own files
+        cli.main(["menu", folder])
+        assert False
+    except SystemExit as e:
+        assert "already there" in str(e)

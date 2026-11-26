@@ -1,0 +1,29 @@
+/* The menu (menu.html). Light and dark themes: the kit puts data-theme on <html>. Change it to match the game. */
+:root { --m-bg: #eef2f6; --m-card: #fff; --m-ink: #1f2a36; --m-muted: #5b6875; --m-line: #c9d3dc;
+        --m-accent: var(--eg-accent, #3b6e8f); --m-done: #2e7d4f; --m-next: #fff3c4; }
+:root[data-theme="dark"] { --m-bg: #12171d; --m-card: #1d242c; --m-ink: #e9edf1; --m-muted: #a3afba; --m-line: #3a4652;
+                           --m-done: #7fd19b; --m-next: #3d3518; }
+body { margin: 0; background: var(--m-bg); color: var(--m-ink); font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+.eg-menu { max-width: 52rem; margin: 0 auto; padding: 1rem; }
+.eg-menu-card { background: var(--m-card); border: 1px solid var(--m-line); border-radius: 14px; padding: 1.1rem 1.25rem; margin-bottom: 1rem; }
+.eg-menu-top { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: .3rem 1rem; margin-bottom: .8rem; }
+.eg-menu-top h2, .eg-menu-get h2 { margin: 0; font-size: 1.25rem; }
+#egMenuDone { color: var(--m-muted); font-weight: bold; }
+.eg-menu-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr; gap: .6rem; }
+@media (min-width: 46rem) { .eg-menu-list { grid-template-columns: 1fr 1fr; } }
+.eg-menu-list li.wide { grid-column: 1 / -1; }
+.eg-menu-item { width: 100%; height: 100%; display: flex; align-items: center; gap: .8rem; text-align: left; font: inherit;
+                color: inherit; background: var(--m-card); border: 2px solid var(--m-line); border-radius: 999px;
+                padding: .5rem 1.2rem .5rem .5rem; min-height: 4rem; cursor: pointer; }
+.eg-menu-item:hover, .eg-menu-item:focus-visible { border-color: var(--m-accent); }
+.eg-menu-item.next { background: var(--m-next); border-color: var(--m-accent); }
+.eg-menu-mark { flex: none; width: 2.6rem; height: 2.6rem; border-radius: 50%; display: flex; align-items: center;
+                justify-content: center; font-weight: bold; font-size: 1.15rem; border: 2px solid var(--m-accent); }
+.eg-menu-item.done .eg-menu-mark { background: var(--m-done); border-color: var(--m-done); color: #fff; }
+.eg-menu-text { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
+.eg-menu-name { font-weight: bold; }
+.eg-menu-about { font-size: .88rem; color: var(--m-muted); }
+.eg-menu-tag { display: inline-block; padding: 0 .5rem; border-radius: 999px; font-size: .75rem; background: var(--m-accent); color: #fff; }
+#egMenuMore { margin: .9rem 0 0; color: var(--m-muted); }
+.eg-menu-get p, .eg-menu-get li { margin: .3rem 0; }
+.eg-menu-get a { color: var(--m-accent); font-weight: bold; }

@@ -383,6 +383,61 @@ def check_site(browser, shots):
         shutil.rmtree(work, ignore_errors=True)
 
 
+def check_starter_menu(browser, shots):
+    """edugame menu's starter menu on a site: the packages as buttons, "Use it in your school" with the release link,
+    and a package marked done once its page calls EduGame.complete()."""
+    import functools
+    import shutil
+    from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
+
+    from edugame import cli, pages
+    from tests.test_languages import packaged
+
+    work = tempfile.mkdtemp(prefix="edugame-starter-")
+    folder = packaged(__import__("pathlib").Path(work))
+    cli.main(["menu", folder])
+    pages.build_pages(projects.load(folder), os.path.join(work, "root", "game"), repo="owner/game")
+
+    class Quiet(SimpleHTTPRequestHandler):
+        def log_message(self, *a):
+            pass
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), functools.partial(Quiet, directory=os.path.join(work, "root")))
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    base = "http://127.0.0.1:%d/game/" % server.server_address[1]
+    errors = []
+    try:
+        context = browser.new_context(locale="fr-FR", viewport={"width": 900, "height": 900})
+        page = context.new_page()
+        page.on("pageerror", lambda e: errors.append(str(e)))
+        page.goto(base)
+        page.wait_for_url("**/game/fr/")
+        items = page.locator(".eg-menu-item")
+        items.first.wait_for()
+        assert items.count() == 2 and "next" in items.first.get_attribute("class")
+        assert page.locator("#egMenuDone").inner_text() == "0 sur 2 terminées"
+        get = page.locator("[data-eg=get]")
+        assert get.locator("h2").inner_text() == "L'utiliser dans votre école"
+        assert get.locator("a").first.get_attribute("href") == "https://github.com/owner/game/releases/latest"
+        assert "my-game-all-0.1.0.zip" in get.inner_text()
+        items.first.click()
+        page.wait_for_url("**/game/fr/lesson-01/")
+        page.wait_for_function("window.EduGame && EduGame.site()")
+        page.evaluate("EduGame.complete()")
+        page.wait_for_timeout(300)
+        page.goto(base + "fr/")
+        page.locator(".eg-menu-item.done").wait_for()
+        assert page.locator("#egMenuDone").inner_text() == "1 sur 2 terminées"
+        assert "next" in items.nth(1).get_attribute("class")
+        if shots:
+            page.screenshot(path=os.path.join(shots, "7-starter-menu.png"), full_page=True)
+        context.close()
+        assert not errors, errors
+    finally:
+        server.shutdown()
+        shutil.rmtree(work, ignore_errors=True)
+
+
 def check_kolibri_games(browser, shots):
     """The same games on the Kolibri Games games page, through the plugin's SDK."""
     try:
@@ -516,6 +571,7 @@ def main():
                 check_play_steps(browser, folder, None)
             check_pages_counting(browser, shots)
             check_site(browser, shots)
+            check_starter_menu(browser, shots)
             check_kolibri_games(browser, shots)
             browser.close()
     finally:

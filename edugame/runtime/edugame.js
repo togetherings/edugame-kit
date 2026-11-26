@@ -60,9 +60,11 @@
  * A site of pages (edugame pages, for a game with packages and a menu page: docs/platforms/GITHUB_PAGES.md).
  * Each page is one package (or the menu) in one language, at its own address.
  *
- *   EduGame.site()              null in a zip; on a site page {language, package, home, next,
+ *   EduGame.site()              null in a zip; on a site page {language, package, home, next, links,
  *                               languages: [{code, name, url, packages}], packages: [{id, title,
- *                               description, url, config}]}. The header gets a link to the menu
+ *                               description, url, config, done}]} (done: after ready(), once that
+ *                               package's page called complete()). links: {release, code, offline}.
+ *                               An element with data-eg="get" gets "Use it in your school". The header gets a link to the menu
  *                               (the word kit.menu), and Options changes language by going to
  *                               the same package (or the menu) in that language.
  *
@@ -145,6 +147,15 @@
           "kit.theme_light": "Light", "kit.theme_dark": "Dark", "kit.theme_auto": "Auto",
           "kit.theme_auto_hint": "(follows this device's light or dark setting)", "kit.language": "Language",
           "kit.apply": "Apply", "kit.back": "Back", "kit.menu": "Menu",
+          "kit.get_title": "Use it in your school",
+          "kit.get_download": "Download {game} from the {link}. The same zip works in:", "kit.get_download_link": "latest release",
+          "kit.get_kolibri": "**Kolibri**: upload it to a channel in Kolibri Studio",
+          "kit.get_scorm": "**Moodle** and other learning systems: add it as a SCORM package",
+          "kit.get_rachel": "**RACHEL**: unzip it into the modules folder",
+          "kit.get_offline": "To use it on a computer without the internet, download {file}, unzip it and open index.html.",
+          "kit.get_code": "{link} is on GitHub.", "kit.get_code_link": "{game}'s code",
+          "kit.menu_heading": "Lessons", "kit.menu_done": "{n} of {total} done", "kit.menu_next": "Next",
+          "kit.menu_more": "More are ready in: {names}. Choose a language in Options.",
           "kit.save_problem_title": "Your progress couldn't be loaded",
           "kit.save_unreadable": "Your saved progress is damaged, so this game can't read it. It's kept as it is until you choose to start over.",
           "kit.save_newer": "Your progress was saved by a newer version of this game. Play it on a device that has the newer version, or ask your teacher to update it.",
@@ -153,6 +164,15 @@
           "kit.theme_light": "Clair", "kit.theme_dark": "Sombre", "kit.theme_auto": "Auto",
           "kit.theme_auto_hint": "(suit le réglage clair ou sombre de cet appareil)", "kit.language": "Langue",
           "kit.apply": "Appliquer", "kit.back": "Retour", "kit.menu": "Menu",
+          "kit.get_title": "L'utiliser dans votre école",
+          "kit.get_download": "Téléchargez {game} depuis la {link}. Le même zip fonctionne dans :", "kit.get_download_link": "dernière version",
+          "kit.get_kolibri": "**Kolibri** : importez-le dans une chaîne de Kolibri Studio",
+          "kit.get_scorm": "**Moodle** et les autres plateformes d'apprentissage : ajoutez-le comme paquet SCORM",
+          "kit.get_rachel": "**RACHEL** : décompressez-le dans le dossier des modules",
+          "kit.get_offline": "Pour l'utiliser sur un ordinateur sans internet, téléchargez {file}, décompressez-le et ouvrez index.html.",
+          "kit.get_code": "{link} est sur GitHub.", "kit.get_code_link": "Le code de {game}",
+          "kit.menu_heading": "Leçons", "kit.menu_done": "{n} sur {total} terminées", "kit.menu_next": "Suivante",
+          "kit.menu_more": "D'autres existent en : {names}. Choisissez une langue dans Options.",
           "kit.save_problem_title": "Ta progression n'a pas pu être chargée",
           "kit.save_unreadable": "Ta progression enregistrée est abîmée, alors ce jeu ne peut pas la lire. Elle est gardée telle quelle jusqu'à ce que tu choisisses de recommencer.",
           "kit.save_newer": "Ta progression a été enregistrée par une version plus récente de ce jeu. Joue sur un appareil qui a la nouvelle version, ou demande à ton enseignant de le mettre à jour.",
@@ -160,11 +180,29 @@
     es: { "kit.options": "Opciones", "kit.options_title": "Opciones", "kit.appearance": "Apariencia",
           "kit.theme_light": "Claro", "kit.theme_dark": "Oscuro", "kit.theme_auto": "Automático",
           "kit.theme_auto_hint": "(sigue el ajuste claro u oscuro de este dispositivo)", "kit.language": "Idioma",
-          "kit.apply": "Aplicar", "kit.back": "Volver", "kit.menu": "Menú" },
+          "kit.apply": "Aplicar", "kit.back": "Volver", "kit.menu": "Menú",
+          "kit.get_title": "Úsalo en tu escuela",
+          "kit.get_download": "Descarga {game} desde la {link}. El mismo zip funciona en:", "kit.get_download_link": "versión más reciente",
+          "kit.get_kolibri": "**Kolibri**: súbelo a un canal en Kolibri Studio",
+          "kit.get_scorm": "**Moodle** y otras plataformas de aprendizaje: agrégalo como paquete SCORM",
+          "kit.get_rachel": "**RACHEL**: descomprímelo en la carpeta de módulos",
+          "kit.get_offline": "Para usarlo en una computadora sin internet, descarga {file}, descomprímelo y abre index.html.",
+          "kit.get_code": "{link} está en GitHub.", "kit.get_code_link": "El código de {game}",
+          "kit.menu_heading": "Lecciones", "kit.menu_done": "{n} de {total} terminadas", "kit.menu_next": "Siguiente",
+          "kit.menu_more": "Hay más en: {names}. Elige un idioma en Opciones." },
     pt: { "kit.options": "Opções", "kit.options_title": "Opções", "kit.appearance": "Aparência",
           "kit.theme_light": "Claro", "kit.theme_dark": "Escuro", "kit.theme_auto": "Automático",
           "kit.theme_auto_hint": "(segue a configuração clara ou escura deste dispositivo)", "kit.language": "Idioma",
-          "kit.apply": "Aplicar", "kit.back": "Voltar", "kit.menu": "Menu" }
+          "kit.apply": "Aplicar", "kit.back": "Voltar", "kit.menu": "Menu",
+          "kit.get_title": "Use na sua escola",
+          "kit.get_download": "Baixe {game} da {link}. O mesmo zip funciona em:", "kit.get_download_link": "versão mais recente",
+          "kit.get_kolibri": "**Kolibri**: envie-o para um canal no Kolibri Studio",
+          "kit.get_scorm": "**Moodle** e outras plataformas de aprendizagem: adicione-o como pacote SCORM",
+          "kit.get_rachel": "**RACHEL**: descompacte-o na pasta de módulos",
+          "kit.get_offline": "Para usá-lo em um computador sem internet, baixe {file}, descompacte-o e abra index.html.",
+          "kit.get_code": "{link} está no GitHub.", "kit.get_code_link": "O código de {game}",
+          "kit.menu_heading": "Lições", "kit.menu_done": "{n} de {total} concluídas", "kit.menu_next": "Próxima",
+          "kit.menu_more": "Há mais em: {names}. Escolha um idioma em Opções." }
   };
 
   function cleanLanguage(code) {
@@ -302,6 +340,7 @@
     var title = t(titleKey());
     if (title && title !== titleKey()) document.title = title;
     translatePage();
+    fillGetSections();
   }
 
   /** Change the language, and remember the learner's choice (in their save, so it can follow them). */
@@ -812,6 +851,65 @@
 
   if (SITE && SITE.mode === "hash") window.addEventListener("hashchange", function () { location.reload(); });
 
+  /** "Use it in your school": the helper fills any element with data-eg="get" on a site's pages (a menu), in the
+   *  current language: where to download the game (the latest release, as site.links.release), what the zips work
+   *  in, the offline copy (site.links.offline) and the game's code (site.links.code). Words: kit.get_*, which a
+   *  game's lang/ files can replace. Without a release link (no --repo), the element is hidden. */
+  function fillGetSections() {
+    var boxes = document.querySelectorAll("[data-eg=get]");
+    if (!boxes.length) return;
+    var links = (SITE && SITE.links) || {}, game = t("title");
+    function linked(key, url, vars) {
+      var p = document.createElement("p"), parts = t(key, vars).split("{link}");
+      p.appendChild(document.createTextNode(parts[0]));
+      if (parts.length > 1) {
+        var a = make("a", { href: url, text: t(key + "_link", { game: game }) });
+        a.target = "_blank"; a.rel = "noopener";
+        p.appendChild(a);
+        p.appendChild(document.createTextNode(parts[1]));
+      }
+      return p;
+    }
+    for (var i = 0; i < boxes.length; i++) {
+      var box = boxes[i];
+      while (box.firstChild) box.removeChild(box.firstChild);
+      box.hidden = !links.release;
+      if (!links.release) continue;
+      box.appendChild(make("h2", { text: t("kit.get_title") }));
+      box.appendChild(linked("kit.get_download", links.release, { game: game }));
+      var ul = document.createElement("ul");
+      ["kit.get_kolibri", "kit.get_scorm", "kit.get_rachel"].forEach(function (key) {
+        var bits = t(key).split("**"), li = document.createElement("li");
+        if (bits.length >= 3) {
+          li.appendChild(document.createTextNode(bits[0]));
+          li.appendChild(make("b", { text: bits[1] }));
+          li.appendChild(document.createTextNode(bits.slice(2).join("")));
+        } else li.appendChild(document.createTextNode(t(key)));
+        ul.appendChild(li);
+      });
+      box.appendChild(ul);
+      if (links.offline) box.appendChild(make("p", { text: t("kit.get_offline", { file: links.offline }) }));
+      if (links.code) box.appendChild(linked("kit.get_code", links.code, { game: game }));
+    }
+  }
+
+  /** On a site, a package is "done" once the game calls complete() on its page (kept in the shared save). */
+  function markDone() {
+    if (!SITE || !SITE.package) return;
+    ready().then(function () {
+      record._done = record._done || {};
+      if (record._done[SITE.package]) return;
+      record._done[SITE.package] = 1;
+      return writeRecord();
+    });
+  }
+  function siteInfo() {
+    if (!SITE) return null;
+    var done = (record && record._done) || {};
+    SITE.packages.forEach(function (p) { p.done = !!done[p.id]; });
+    return SITE;
+  }
+
   /** Options' language on a site: remember the choice, then go to that language's page. */
   function goToLanguage(code) {
     var to = null;
@@ -1308,6 +1406,7 @@
 
   function complete() {
     announce("complete");
+    markDone();
     ready().then(function () { if (backend.complete) backend.complete(); });
   }
 
@@ -1337,7 +1436,7 @@
     languages: languages,
     setLanguage: setLanguage,
     // a site of pages
-    site: function () { return SITE; },
+    site: siteInfo,
     goTo: goTo,
     // appearance and options
     theme: theme,

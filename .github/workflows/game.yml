@@ -61,7 +61,7 @@ on:
 env:
   # This release of the kit. Always v + __version__ in edugame/__init__.py (a test checks), so a
   # game calling game.yml@vX.Y.Z builds with kit X.Y.Z. tools/bump_version.py changes it.
-  KIT_REF: v0.3.6
+  KIT_REF: v0.3.7
   KIT: ${{ inputs.kit }}
 
 jobs:
@@ -92,7 +92,7 @@ jobs:
       - name: Bundle the zips for the release
         if: inputs.release-bundles
         run: |
-          edugame bundle "${{ inputs.folder }}" -o bundles
+          edugame bundle "${{ inputs.folder }}" -o bundles --repo "${{ github.repository }}"
           for b in bundles/*.zip; do echo "$b:"; unzip -Z1 "$b" | sed 's/^/  /'; done
       - uses: actions/upload-artifact@v7
         if: inputs.release-bundles

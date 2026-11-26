@@ -213,7 +213,7 @@ def build_pages(project, target, goatcounter=None, repo=None, events=True):
 def _build_pages(project, target, code, counter, repo):
     os.makedirs(target)
     if project.menu and project.packages():
-        build_site(project, target, counter)
+        build_site(project, target, counter, repo=repo)
         return
     play = os.path.join(target, "play")
     packages = []
@@ -255,7 +255,14 @@ def _page_path(code, pkg=None):
     return address(code) + "/" + (pkg["id"] + "/" if pkg else "")
 
 
-def site_config(project, plan, code, pkg, mode):
+def site_links(project, repo=None):
+    """Where to get the game: the latest release and the code on GitHub (with --repo), and the offline copy's file."""
+    base = "https://github.com/%s" % repo if repo else None
+    return {"release": base + "/releases/latest" if base else None, "code": base,
+            "offline": offline_name(project) if project.menu and project.menu.get("offline") else None}
+
+
+def site_config(project, plan, code, pkg, mode, repo=None):
     """config.site for one page: where the other pages are (relative addresses, or #addresses offline)."""
     depth = 2 if pkg else 1
 
@@ -282,7 +289,7 @@ def site_config(project, plan, code, pkg, mode):
         if at + 1 < len(mine):
             nxt = url(code, mine[at + 1])
     return {"mode": mode, "language": code, "address": address(code), "package": pkg["id"] if pkg else None,
-            "home": url(code), "next": nxt, "languages": langs, "packages": listed}
+            "home": url(code), "next": nxt, "languages": langs, "packages": listed, "links": site_links(project, repo)}
 
 
 def _page_variant(project, code, pkg):
@@ -349,7 +356,7 @@ def _redirect_page(title, script, fallback):
 """ % (escape(title), script, escape(fallback), escape(title))
 
 
-def build_site(project, target, counter="", languages=None):
+def build_site(project, target, counter="", languages=None, repo=None):
     """The site of pages, written into ``target`` (which must be empty or missing)."""
     plan = site_plan(project, languages)
     made = []
@@ -359,7 +366,7 @@ def build_site(project, target, counter="", languages=None):
             folder = os.path.join(target, *_page_path(code, pkg).strip("/").split("/"))
             if os.path.isdir(folder):
                 shutil.rmtree(folder)
-            for name, data in build.entries(v, site=site_config(project, plan, code, pkg, "pages")):
+            for name, data in build.entries(v, site=site_config(project, plan, code, pkg, "pages", repo)):
                 if name in PLATFORM_FILES:
                     continue
                 _write(os.path.join(folder, *name.split("/")), data)
@@ -406,7 +413,7 @@ def offline_name(project):
     return "%s-%s-%s.zip" % (project.slug, project.menu.get("offline") or "all", project.version)
 
 
-def offline_entries(project, languages=None):
+def offline_entries(project, languages=None, repo=None):
     """The offline copy: [(name, bytes)]. One index.html shows every page, chosen by #address:
     #en (the menu in English), #en/lesson-03 (a package). Every page's files are in one folder."""
     plan = site_plan(project, languages)
@@ -417,7 +424,7 @@ def offline_entries(project, languages=None):
         for pkg in [None] + pkgs:
             v = _page_variant(project, code, pkg)
             key = address(code) + ("/" + pkg["id"] if pkg else "")
-            for name, data in build.entries(v, site=site_config(project, plan, code, pkg, "hash")):
+            for name, data in build.entries(v, site=site_config(project, plan, code, pkg, "hash", repo)):
                 if name in PLATFORM_FILES:
                     continue
                 if name == "edugame-config.js":
@@ -479,7 +486,7 @@ def offline_entries(project, languages=None):
     return out
 
 
-def offline_zip(project, out_dir, languages=None):
+def offline_zip(project, out_dir, languages=None, repo=None):
     """<game>-<offline>-<version>.zip, the offline copy of the site. Returns its path."""
     path = os.path.join(out_dir, offline_name(project))
-    return build._write_zip(path, offline_entries(project, languages))
+    return build._write_zip(path, offline_entries(project, languages, repo))

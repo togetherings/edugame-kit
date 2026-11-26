@@ -72,6 +72,37 @@ def cmd_new(args):
         print("a pull request when there's a new kit release.")
 
 
+def cmd_menu(args):
+    """Add the starter menu (templates/menu) to a game with packages, and name it in edugame.json."""
+    path = os.path.join(args.folder, "edugame.json")
+    with open(path, encoding="utf-8") as f:
+        data = json.load(f)
+    if not data.get("packages"):
+        sys.exit("A menu lists a game's packages: add packages to edugame.json first.")
+    src = os.path.join(TEMPLATES, "menu")
+    made = []
+    for root, _dirs, files in os.walk(src):
+        for name in files:
+            rel = os.path.relpath(os.path.join(root, name), src)
+            dest = os.path.join(args.folder, rel)
+            if os.path.exists(dest):
+                sys.exit("%s is already there: nothing was changed." % rel)
+            made.append((os.path.join(root, name), dest, rel))
+    for from_, dest, _rel in made:
+        os.makedirs(os.path.dirname(dest), exist_ok=True)
+        shutil.copy(from_, dest)
+    pages_cfg = data.setdefault("pages", {})
+    if "menu" not in pages_cfg:
+        pages_cfg["menu"] = {"page": "menu.html", "files": ["menu/*"], "offline": "all"}
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+            f.write("\n")
+    print("Added the menu: %s." % ", ".join(rel.replace(os.sep, "/") for _f, _d, rel in made))
+    print("edugame.json's pages.menu names it. Try it: edugame pages %s -o site, then open site/index.html"
+          % args.folder)
+    print("through a web server (python -m http.server -d site).")
+
+
 def cmd_check(args):
     p = _load(args.folder)
     print("%s %s: a %s Game in %s." % (p.title, p.version, p.type.capitalize(), ", ".join(p.languages)))
@@ -118,7 +149,7 @@ def cmd_bundle(args):
     try:
         made = build.build_bundles(p, args.out_dir, languages=_languages(args))
         if p.menu and p.packages():
-            made.append(pages.offline_zip(p, args.out_dir, languages=_languages(args)))
+            made.append(pages.offline_zip(p, args.out_dir, languages=_languages(args), repo=args.repo))
     except (projects.ProjectError, ValueError) as e:
         sys.exit(str(e))
     for path in made:
@@ -320,7 +351,12 @@ def main(argv=None):
     p.add_argument("folder")
     p.add_argument("-o", "--out-dir", default="bundles")
     p.add_argument("--lang", help="only these languages, like fr or fr,en")
+    p.add_argument("--repo", help="owner/name on GitHub: the offline copy's menu links to the latest release")
     p.set_defaults(func=cmd_bundle)
+
+    p = sub.add_parser("menu", help="for a game with packages: add a starter menu page for its website (pages.menu)")
+    p.add_argument("folder")
+    p.set_defaults(func=cmd_menu)
 
     p = sub.add_parser("preview", help="try the game in the test page")
     p.add_argument("folder")

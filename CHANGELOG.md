@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.3.7
+
+### What games need to do
+
+- Nothing. A game with packages can add a menu with `edugame menu`, and a menu page can show "Use it in your
+  school" with `<section data-eg="get"></section>`.
+
+### Changes
+
+- **`edugame menu`**: adds a starter menu (`menu.html` and `menu/`) to a game with packages and names it in
+  `edugame.json`'s `pages.menu`. It lists the packages as buttons (a tick once done, the next one highlighted),
+  "3 of 8 done", and "Use it in your school". A package's `config.menu` can make it take a whole row (`wide`), leave it
+  out of the count (`count: false`) or show a mark in place of its number (`mark`).
+- **"Use it in your school" from the helper**: an element with `data-eg="get"` on a site's page gets the download
+  links, what the zips work in, the offline copy and the game's code, in the page's language (`kit.get_*` words in
+  English, French, Spanish and Portuguese; games can change them).
+- **`EduGame.site().links`**: the latest release and the code on GitHub (with `--repo`: `game-pages.yml` already gives
+  it, and `game.yml` now gives it to `edugame bundle` for the offline copy), and the offline copy's file name.
+- **`EduGame.site().packages[].done`**: a package is done once its page called `EduGame.complete()` (kept in the
+  site's shared save).
+- New kit words: `kit.menu_heading`, `kit.menu_done`, `kit.menu_next`, `kit.menu_more` and `kit.get_*`.
+
 ## 0.3.6
 
 ### What games need to do
