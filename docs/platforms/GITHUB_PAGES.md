@@ -62,7 +62,21 @@ The language's part of an address is its code in lower case (`en-GB` is `en-gb`)
 goes to the menu in the language chosen last on the site, then `?lang=`, then the browser's
 languages, then the game's default. All the pages share one save, since they're one website.
 
-Add the menu page to the game, and name it in `edugame.json`:
+The quickest start is the kit's starter menu:
+
+```
+edugame menu my-game        # adds menu.html and menu/ (menu.js, menu.css), and pages.menu in edugame.json
+```
+
+It lists the packages as buttons (a tick once a package is done, the first one not done as "Next"),
+with "3 of 8 done" and "Use it in your school" (below). Its words are the kit's (`kit.menu_heading`
+"Lessons", `kit.menu_done`, `kit.menu_next`, `kit.menu_more`): change any of them in the game's
+`lang/` files, like `"kit.menu_heading": "Maps"`. A package's `config.menu` changes how it shows:
+`{"wide": true}` takes a whole row, `{"count": false}` leaves it out of "3 of 8 done", and
+`{"mark": "★"}` shows in its circle in place of its number. Then change the page as you like, or
+write your own (LIT has its own menu, in its own look).
+
+To use a menu page of your own, add it to the game and name it in `edugame.json`:
 
 ```json
 "pages": { "menu": { "page": "menu.html", "files": ["js/menu.js"], "offline": "all-lessons" } }
@@ -83,9 +97,21 @@ On every page of the site, `EduGame.site()` says where the others are (it's `nul
   next: "../../en/lesson-04/",                // the next package in this language, or null
   languages: [{code: "fr", name: "Français", url: "../../fr/", packages: 1}, ...],
   packages: [{id: "lesson-01", title: "...", description: "...", url: "../../en/lesson-01/",
-              config: {lesson: "01"}}, ...]   // the packages in this language, in order
+              config: {lesson: "01"}, done: true}, ...],   // the packages in this language, in order
+  links: {release: "https://github.com/owner/game/releases/latest",   // with --repo (game-pages.yml
+          code: "https://github.com/owner/game",                      // gives it), else null
+          offline: "my-game-all-lessons-1.0.0.zip"}                   // with pages.menu.offline
 }
 ```
+
+A package is `done` once its page called `EduGame.complete()` (kept in the site's shared save); ask
+for `EduGame.site()` after `EduGame.ready()` to see it.
+
+**"Use it in your school"**: put `<section data-eg="get"></section>` in the menu, and the helper fills
+it in, in the page's language: where to download the game (the latest release), that the same zip
+works in Kolibri, Moodle and other SCORM systems, and RACHEL, the offline copy, and the game's code.
+Its words are `kit.get_*`, which the game's `lang/` files can change (LIT says "Each lesson is its own
+zip"). Without a release link (no `--repo`), it's hidden.
 
 The menu page lists `site.packages` and opens one with `EduGame.goTo(p.url)` (or a link). The
 results of every package are in `EduGame.ready()`'s `results`, one board each, as the game names

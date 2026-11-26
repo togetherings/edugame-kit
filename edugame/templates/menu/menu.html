@@ -1,0 +1,32 @@
+<!doctype html>
+<!--
+  The menu: a page of its own on the game's website (made by "edugame pages") and in its offline copy, never in a
+  zip. It lists the game's packages (lessons, maps ...) in the page's language, each one a button. The words are the
+  kit's (kit.menu_*, kit.get_*): change any of them in the game's lang/ files, like "kit.menu_heading": "Maps".
+  Made by "edugame menu"; change it as you like (docs/platforms/GITHUB_PAGES.md, "A site with a menu").
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Menu</title>
+<link rel="stylesheet" href="menu/menu.css">
+</head>
+<body>
+<main class="eg-menu">
+  <section class="eg-menu-card">
+    <div class="eg-menu-top">
+      <h2 data-t="kit.menu_heading"></h2>
+      <span id="egMenuDone"></span>
+    </div>
+    <ul id="egMenuList" class="eg-menu-list"></ul>
+    <p id="egMenuMore" hidden></p>
+  </section>
+  <!-- "Use it in your school": the kit fills this in (with the links from "edugame pages --repo") -->
+  <section class="eg-menu-card eg-menu-get" data-eg="get"></section>
+</main>
+<script src="edugame-config.js"></script>
+<script src="edugame.js"></script>
+<script src="menu/menu.js"></script>
+</body>
+</html>
