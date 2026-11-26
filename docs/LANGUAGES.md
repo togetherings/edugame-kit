@@ -42,8 +42,11 @@ A game has three kinds of material, and each lives in its own place:
 
 ### Language codes
 
-Use codes like `en`, `fr`, `pt-BR`, `es-419` (Latin American Spanish) or `zh-Hans`, in file
+Use codes like `en`, `fr`, `pt-BR`, `es-la` (Latin American Spanish) or `zh-Hans`, in file
 names and in `languages` in `edugame.json`. The first language in `languages` is the default.
+(`es-la` isn't a standard code, but many programs use it and people recognise it. A learner whose
+browser or Kolibri asks for another Spanish, like `es-419` or `es-MX`, still gets it: the helper
+falls back to the same base language.)
 
 A **regional language** only needs the words that differ. With `"languages": ["en", "en-GB"]`,
 `lang/en-GB.json` might hold just `{"_language": {"name": "English (UK)"}, "color": "colour"}`; the

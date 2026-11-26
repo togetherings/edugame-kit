@@ -21,6 +21,8 @@
   and `EduGame.goTo(url)`. The header gets a link back to the menu (the word `kit.menu`), Options'
   language goes to the same package (or the menu) in that language, and each page has its own title.
 - **Tests**: `tests/test_site.py`, and the browser test plays a site and its offline copy.
+- **Docs:** docs/LANGUAGES.md gives `es-la` as the example code for Latin American Spanish (LIT's
+  code), not `es-419`.
 
 ## 0.3.4
 
