@@ -198,10 +198,23 @@ def build_pages(project, target, goatcounter=None, repo=None, events=True):
     counter = tracker(code, events) if code else ""
     if os.path.isdir(target):
         shutil.rmtree(target)
+    # Built in a folder of its own, then moved into place: the target is often inside the game's folder
+    # (game-pages.yml: "edugame pages . -o _site"), and pages built there would be copied into the next ones.
+    import tempfile
+    work = tempfile.mkdtemp(prefix="edugame-pages-")
+    try:
+        _build_pages(project, os.path.join(work, "site"), code, counter, repo)
+        shutil.move(os.path.join(work, "site"), target)
+    finally:
+        shutil.rmtree(work, ignore_errors=True)
+    return code
+
+
+def _build_pages(project, target, code, counter, repo):
     os.makedirs(target)
     if project.menu and project.packages():
         build_site(project, target, counter)
-        return code
+        return
     play = os.path.join(target, "play")
     packages = []
     if project.packages():
@@ -217,7 +230,6 @@ def build_pages(project, target, goatcounter=None, repo=None, events=True):
     with open(os.path.join(target, "site.json"), "w", encoding="utf-8") as f:
         json.dump({"game": project.id, "version": project.version, "goatcounter": bool(code),
                    "packages": [folder for _, folder in packages]}, f)
-    return code
 
 
 # ------------------------------------------------------------------ a site with a menu

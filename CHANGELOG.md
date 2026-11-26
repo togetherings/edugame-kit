@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.3.6
+
+### What games need to do
+
+- Nothing. Games with a menu page (`pages.menu`) should take this release: with 0.3.5 their GitHub Pages
+  workflow never finished.
+
+### Changes
+
+- **Fixed: a site with a menu copied itself into itself.** `game-pages.yml` runs `edugame pages . -o _site`,
+  so for a game at the repository's top the site was written inside the game's folder, and each page built
+  after the first took the pages already written as game files (LIT's site reached gigabytes until the runner
+  stopped). `edugame pages` now builds in a folder of its own and moves the site into place, and a `_site`
+  folder is never part of a game (like `dist` and `bundles`).
+
 ## 0.3.5
 
 ### What games need to do
