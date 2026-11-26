@@ -67,7 +67,7 @@ REQUIRED_STRINGS = ("title",)
 #: Files the build makes; a game folder mustn't have its own.
 GENERATED = ("edugame.js", "edugame-config.js", "kolibri-game.json", "imsmanifest.xml", "rachel-index.php")
 #: Left out of builds.
-SKIP_NAMES = {".git", ".DS_Store", "Thumbs.db", "__pycache__", "node_modules", "dist", "bundles", ".github"}
+SKIP_NAMES = {".git", ".DS_Store", "Thumbs.db", "__pycache__", "node_modules", "dist", "bundles", "_site", ".github"}
 #: A game's play steps for `edugame kolibri-test`; never part of the game.
 NOT_SHIPPED = ("tests/kolibri_play.py",)
 #: SCORM 1.2 suspend_data is at most 4096 characters; see runtime/edugame.js.

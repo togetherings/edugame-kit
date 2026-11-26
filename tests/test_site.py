@@ -168,3 +168,20 @@ def test_menu_settings_are_checked(tmp_path):
         assert False
     except projects.ProjectError as e:
         assert any("pages must be like" in x for x in e.problems)
+
+
+def test_a_site_built_inside_the_game_never_ends_up_in_its_pages(tmp_path):
+    # game-pages.yml runs "edugame pages . -o _site": the site lands inside the game's folder (v0.3.5 copied each
+    # page into the next ones, until the runner ran out of space).
+    folder = with_menu(tmp_path)
+    for out in ("_site", "web"):
+        site = os.path.join(folder, out)
+        pages.build_pages(projects.load(folder), site)
+        pages.build_pages(projects.load(folder), site)                    # again, with the first one there
+        for root, dirs, files in os.walk(site):
+            assert out not in dirs, root
+        assert json.load(open(os.path.join(site, "site.json")))["pages"] == [
+            "en/", "en/lesson-01/", "fr/", "fr/lesson-01/", "fr/lesson-02/"]
+        if out == "web":
+            import shutil
+            shutil.rmtree(site)
