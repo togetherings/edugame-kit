@@ -91,7 +91,7 @@ The helper checks, in this order:
 | Where | How it knows | Saves | Scores |
 |---|---|---|---|
 | **Kolibri Games games page** | the game is served from the plugin's `play/` address | `KolibriGames.setState` (up to 64 KB), in the learner's account | the plugin's attempts: scoreboards, challenges, every move for coaches |
-| **SCORM 1.2**: Kolibri Learn, Moodle, other learning systems | a SCORM `API` object in this page or a parent page (inside a frame, it waits up to 1.5 seconds for it, and keeps looking for 10) | `cmi.suspend_data` (up to 4,096 characters) | kept in `cmi.suspend_data`; outside Kolibri, a 0-100 grade in `cmi.core.score.raw` |
+| **SCORM 1.2**: Kolibri Learn, Moodle, other learning systems | a SCORM `API` object in this page or a parent page (inside a frame, it waits up to 1.5 seconds for it, and keeps looking for 10: if it turns up later, the learner's own play since the page opened moves there, never what other learners left in the browser) | `cmi.suspend_data` (up to 4,096 characters) | kept in `cmi.suspend_data`; outside Kolibri, a 0-100 grade in `cmi.core.score.raw` |
 | **Sugarizer** with sugar-web | built with `--sugar-lib` | the Journal entry of this activity | kept with the save |
 | **Anywhere else**: RACHEL, Kiwix, a website | nothing above | the browser's `localStorage`, under `edugame:<id>` | kept with the save |
 
