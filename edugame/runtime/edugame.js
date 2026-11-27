@@ -636,6 +636,8 @@
     };
   }
 
+  var localAtOpen = null;   // what this browser had kept when the page opened (see watchForLateScorm)
+
   function localBackend() {
     var key = "edugame:" + config.id;
     return {
@@ -644,6 +646,7 @@
         var text = null;
         try { text = window.localStorage.getItem(key); } catch (e) { /* storage blocked */ }
         var kept = readRecord(text);
+        localAtOpen = readRecord(text).record || {};   // a copy: the game changes the record it gets
         return Promise.resolve({ record: kept.record, problem: kept.problem, language: null, player: null });
       },
       write: function (rec) {
@@ -793,8 +796,16 @@
       late.open().then(function (opened) {
         backend = late;
         info.platform = late.name;
-        if (hasContent(opened.record)) record = opened.record;  // the learner's record wins
-        else return late.write(record);
+        if (hasContent(opened.record)) { record = opened.record; return; }  // the learner's record wins
+        // The learner has nothing saved in the learning system yet. What this browser kept from
+        // before may be another learner's (a shared computer), so only what changed since the
+        // page opened goes across: the learner's own play while the connection was late.
+        var mine = { _v: VERSION }, before = localAtOpen || {};
+        Object.keys(record).forEach(function (k) {
+          if (k !== "_v" && JSON.stringify(record[k]) !== JSON.stringify(before[k])) mine[k] = record[k];
+        });
+        record = mine;
+        if (hasContent(record)) return late.write(record);
       });
     });
   }

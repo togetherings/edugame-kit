@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.3.8
+
+### What games need to do
+
+- Nothing. Games used in learning systems should take this release.
+
+### Changes
+
+- **Fixed: a learner could get another learner's progress on a shared computer.** When a learning system's SCORM
+  connection turned up late (more than 1.5 seconds after the game opened), the helper had started saving in the
+  browser, and then copied everything the browser had kept into a learner with nothing saved yet, including what a
+  previous learner left there. Now only what changed since the page opened goes across: the learner's own play
+  while the connection was late. Found by a review of SINGE.
+
 ## 0.3.7
 
 ### What games need to do

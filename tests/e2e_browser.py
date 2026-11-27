@@ -120,6 +120,51 @@ def check_local_save(page, base, shots):
     page.frame_locator("#game").locator("#level:has-text('Niveau 3 sur 5')").wait_for()
 
 
+# A learning system's SCORM connection, put on the test page by hand after the game opened (some systems are slow).
+LATE_API = """() => { const store = {}; window.lateStore = store;
+  window.API = { LMSInitialize: () => 'true', LMSFinish: () => 'true', LMSCommit: () => 'true',
+    LMSGetValue: n => store[n] || '', LMSSetValue: (n, v) => { store[n] = String(v); return 'true'; },
+    LMSGetLastError: () => '0', LMSGetErrorString: () => '', LMSGetDiagnostic: () => '' }; }"""
+
+
+def check_late_scorm(page, base):
+    """A shared computer: what another learner left in this browser never reaches a learner whose learning
+    system's connection turned up late. Only what this learner played while it was late goes across."""
+    key = "edugame:org.example.my-game"
+    frame = test_page(page, base, "local")
+    frame.locator("#question:has-text('What is')").wait_for()
+    page.evaluate("k => localStorage.removeItem(k)", key)
+    page.locator("#reload").click()
+    frame = page.frame_locator("#game")
+    frame.locator("#level:has-text('Level 1 of 5')").wait_for()
+    answer_sum(frame)                                   # the learner before
+    frame.locator("#level:has-text('Level 2 of 5')").wait_for()
+    before = page.evaluate("k => localStorage.getItem(k)", key)
+    assert before and "_save" in before, before
+    # The next learner: the game opens on what this browser kept, then the connection turns up.
+    page.locator("#reload").click()
+    frame = page.frame_locator("#game")
+    frame.locator("#level:has-text('Level 2 of 5')").wait_for()
+    page.evaluate(LATE_API)
+    page.wait_for_function("() => window.lateStore['cmi.core.lesson_status'] === 'incomplete'", timeout=15000)
+    page.wait_for_timeout(500)
+    assert "cmi.suspend_data" not in page.evaluate("() => window.lateStore"), "another learner's save was copied"
+    # Again, but this learner plays before the connection turns up: their play goes across.
+    page.locator("#reload").click()
+    frame = page.frame_locator("#game")
+    frame.locator("#level:has-text('Level 2 of 5')").wait_for()
+    answer_sum(frame)
+    frame.locator("#level:has-text('Level 3 of 5')").wait_for()
+    page.wait_for_function("([k, b]) => localStorage.getItem(k) !== b", arg=[key, before])
+    mine = json.loads(page.evaluate("k => localStorage.getItem(k)", key))
+    page.evaluate(LATE_API)
+    page.wait_for_function("() => !!window.lateStore['cmi.suspend_data']", timeout=15000)
+    sent = json.loads(page.evaluate("() => window.lateStore['cmi.suspend_data']"))
+    assert sent["_save"] == mine["_save"], (sent, mine)
+    page.evaluate("() => { delete window.API; }")
+    page.evaluate("k => localStorage.removeItem(k)", key)
+
+
 def answer_sum(frame):
     q = frame.locator("#question").inner_text()  # What is a + b?
     a, b = [int(x) for x in q.replace("What is ", "").rstrip("?").split(" + ")]
@@ -559,6 +604,7 @@ def main():
             check_scorm(page, hunt_url, shots)
             check_french(page, hunt_url)
             check_local_save(page, saved_url, shots)
+            check_late_scorm(page, saved_url)
             check_save_problem(page, saved_url, shots)
             check_lessons(page, lessons_url)
             check_options(browser, memory_url, shots)
