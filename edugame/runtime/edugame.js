@@ -75,6 +75,10 @@
  *                               -> {open(), close(), isOpen()}: a panel that holds the keyboard while it's
  *                               open (Tab stays inside, Escape and a click on its backdrop close it) and
  *                               gives it back to whatever had it
+ *   EduGame.addKeys({id, title, when, hint, keys: [{keys, label, does, run, when}, {help: true}]})
+ *                               a game's keys: a ⌨ button beside Options, the list of keys (also ? and /),
+ *                               keys the kit runs, and a first-key hint. EduGame.openKeys(), closeKeys(),
+ *                               keysOpen(), showKeyHint(word)
  *   EduGame.arrowNav(container, selector, {numbers, start})
  *                               the arrow keys move between those buttons (the nearest one that way),
  *                               Home and End to the first and last; numbers: 1-9 press data-number buttons
@@ -154,7 +158,8 @@
   // The kit's own words (the Options button and panel). A game's lang/ files can
   // replace any of them by using the same key.
   var KIT_WORDS = {
-    en: { "kit.options": "Options", "kit.options_title": "Options", "kit.appearance": "Appearance",
+    en: { "kit.keys_button": "Keyboard keys", "kit.keys_title": "Keyboard", "kit.keys_help": "? /", "kit.keys_help_does": "This list", "kit.keys_close": "Close",
+          "kit.options": "Options", "kit.options_title": "Options", "kit.appearance": "Appearance",
           "kit.theme_light": "Light", "kit.theme_dark": "Dark", "kit.theme_auto": "Auto",
           "kit.theme_auto_hint": "(follows this device's light or dark setting)", "kit.language": "Language",
           "kit.apply": "Apply", "kit.back": "Back", "kit.menu": "Menu",
@@ -171,7 +176,8 @@
           "kit.save_unreadable": "Your saved progress is damaged, so this game can't read it. It's kept as it is until you choose to start over.",
           "kit.save_newer": "Your progress was saved by a newer version of this game. Play it on a device that has the newer version, or ask your teacher to update it.",
           "kit.save_play_without": "Play without saving", "kit.save_start_over": "Start over" },
-    fr: { "kit.options": "Options", "kit.options_title": "Options", "kit.appearance": "Apparence",
+    fr: { "kit.keys_button": "Touches du clavier", "kit.keys_title": "Clavier", "kit.keys_help": "? /", "kit.keys_help_does": "Cette liste", "kit.keys_close": "Fermer",
+          "kit.options": "Options", "kit.options_title": "Options", "kit.appearance": "Apparence",
           "kit.theme_light": "Clair", "kit.theme_dark": "Sombre", "kit.theme_auto": "Auto",
           "kit.theme_auto_hint": "(suit le réglage clair ou sombre de cet appareil)", "kit.language": "Langue",
           "kit.apply": "Appliquer", "kit.back": "Retour", "kit.menu": "Menu",
@@ -188,7 +194,8 @@
           "kit.save_unreadable": "Ta progression enregistrée est abîmée, alors ce jeu ne peut pas la lire. Elle est gardée telle quelle jusqu'à ce que tu choisisses de recommencer.",
           "kit.save_newer": "Ta progression a été enregistrée par une version plus récente de ce jeu. Joue sur un appareil qui a la nouvelle version, ou demande à ton enseignant de le mettre à jour.",
           "kit.save_play_without": "Jouer sans enregistrer", "kit.save_start_over": "Recommencer" },
-    es: { "kit.options": "Opciones", "kit.options_title": "Opciones", "kit.appearance": "Apariencia",
+    es: { "kit.keys_button": "Teclas del teclado", "kit.keys_title": "Teclado", "kit.keys_help": "? /", "kit.keys_help_does": "Esta lista", "kit.keys_close": "Cerrar",
+          "kit.options": "Opciones", "kit.options_title": "Opciones", "kit.appearance": "Apariencia",
           "kit.theme_light": "Claro", "kit.theme_dark": "Oscuro", "kit.theme_auto": "Automático",
           "kit.theme_auto_hint": "(sigue el ajuste claro u oscuro de este dispositivo)", "kit.language": "Idioma",
           "kit.apply": "Aplicar", "kit.back": "Volver", "kit.menu": "Menú",
@@ -201,7 +208,8 @@
           "kit.get_code": "{link} está en GitHub.", "kit.get_code_link": "El código de {game}",
           "kit.menu_heading": "Lecciones", "kit.menu_done": "{n} de {total} terminadas", "kit.menu_next": "Siguiente",
           "kit.menu_more": "Hay más en: {names}. Elige un idioma en Opciones." },
-    pt: { "kit.options": "Opções", "kit.options_title": "Opções", "kit.appearance": "Aparência",
+    pt: { "kit.keys_button": "Teclas do teclado", "kit.keys_title": "Teclado", "kit.keys_help": "? /", "kit.keys_help_does": "Esta lista", "kit.keys_close": "Fechar",
+          "kit.options": "Opções", "kit.options_title": "Opções", "kit.appearance": "Aparência",
           "kit.theme_light": "Claro", "kit.theme_dark": "Escuro", "kit.theme_auto": "Automático",
           "kit.theme_auto_hint": "(segue a configuração clara ou escura deste dispositivo)", "kit.language": "Idioma",
           "kit.apply": "Aplicar", "kit.back": "Voltar", "kit.menu": "Menu",
@@ -1034,13 +1042,19 @@
     ".eg-header .eg-title{margin:0;font-size:1.25rem;line-height:1.3;font-weight:700}",
     ".eg-header.eg-no-title{justify-content:flex-end;border-bottom:0;padding-bottom:0}",
     ".eg-header.eg-no-title .eg-title{display:none}",
-    ".eg-options-button,.eg-menu-link{font:inherit;cursor:pointer;padding:.35rem .9rem;border-radius:8px;",
+    ".eg-header .eg-buttons{display:flex;gap:.5rem;align-items:center}",
+    ".eg-options-button,.eg-keys-button,.eg-menu-link{font:inherit;cursor:pointer;padding:.35rem .9rem;border-radius:8px;",
     "border:2px solid var(--eg-accent);background:transparent;color:inherit}",
     ".eg-menu-link{text-decoration:none;display:inline-block}",
     ".eg-menu-link:before{content:'\\2039\\00a0'}",
     ".eg-header .eg-menu-link+.eg-title{flex:1}",
     ".eg-menu-link:focus-visible{outline:3px solid var(--eg-accent);outline-offset:2px}",
-    ".eg-options-button:focus-visible,.eg-card button:focus-visible,.eg-card input:focus-visible{outline:3px solid var(--eg-accent);outline-offset:2px}",
+    ".eg-keys-button{min-width:2.4em;padding:.35rem .6rem;font-weight:700}",
+    ".eg-card input:focus-visible{outline:3px solid var(--eg-accent);outline-offset:2px}",
+    // hover and the keyboard look the same: filled with the accent colour
+    ".eg-options-button:hover,.eg-options-button:focus-visible,.eg-keys-button:hover,.eg-keys-button:focus-visible,",
+    ".eg-menu-link:hover,.eg-menu-link:focus-visible,.eg-actions button:hover,.eg-actions button:focus-visible,",
+    ".eg-keys-close:hover,.eg-keys-close:focus-visible{background:var(--eg-accent);color:#fff;outline:none}",
     ".eg-overlay{position:fixed;inset:0;z-index:2147483000;display:flex;align-items:flex-start;justify-content:center;",
     "padding:5vh 16px;background:rgba(0,0,0,.45);overflow:auto}",
     ".eg-card{width:100%;max-width:28rem;padding:1rem 1.25rem;border-radius:12px;background:var(--eg-panel,#fff);",
@@ -1055,7 +1069,38 @@
     ".eg-actions{display:flex;gap:.6rem;justify-content:flex-end;margin-top:.8rem;flex-wrap:wrap}",
     ".eg-actions button{font:inherit;cursor:pointer;padding:.45rem 1.1rem;border-radius:8px;",
     "border:2px solid var(--eg-accent);background:transparent;color:inherit}",
-    ".eg-actions .eg-primary{background:var(--eg-accent);color:#fff}"
+    ".eg-actions .eg-primary{background:var(--eg-accent);color:#fff}",
+    ".eg-actions .eg-primary:hover,.eg-actions .eg-primary:focus-visible{filter:brightness(.8)}",
+    ".eg-card label{border-radius:6px;padding-left:.35rem;padding-right:.35rem}",
+    ".eg-card label:hover,.eg-card label:focus-within{background:rgba(127,127,127,.18)}",
+    ".eg-overlay[hidden]{display:none}",
+    // the list of keys (EduGame.addKeys)
+    ".eg-keys .eg-card{position:relative;max-width:34rem}",
+    ".eg-keys h2{margin-right:2.5rem}",
+    ".eg-keys-close{position:absolute;top:.6rem;right:.6rem;width:2em;font:inherit;font-size:1.1rem;line-height:1;cursor:pointer;",
+    "padding:.2rem 0;border-radius:6px;border:2px solid var(--eg-accent);background:transparent;color:inherit}",
+    "[dir=rtl] .eg-keys-close{right:auto;left:.6rem}",
+    ".eg-keys dl{display:grid;grid-template-columns:auto 1fr;gap:.35rem 1rem;margin:0}",
+    ".eg-keys dt{font-weight:700;white-space:nowrap}",
+    ".eg-keys dd{margin:0}",
+    ".eg-keys .eg-keys-part{grid-column:1/-1;font-size:1.05rem;margin-top:.6rem}",
+    ".eg-keys .eg-keys-part:first-child{margin-top:0}",
+    ".eg-key-hint{position:fixed;left:50%;bottom:12px;transform:translateX(-50%);z-index:2147482000;width:max-content;",
+    "max-width:calc(100vw - 24px);white-space:pre-wrap;text-align:center;padding:.4rem .9rem;border-radius:8px;",
+    "background:#000;color:#fff;font:15px/1.4 system-ui,sans-serif;pointer-events:none}",
+    "[data-theme=dark] .eg-key-hint{background:#fff;color:#000}",
+    // Colour starting points (docs/ACCESSIBILITY.md): Okabe-Ito answer colours, a pointing outline that shows on any
+    // colour, text only screen readers read, and a flash that stops when the device asks for less motion
+    ":root{--eg-good:#009E73;--eg-retry:#F0E442;--eg-bad:#D55E00;--eg-point:#fff;--eg-point-edge:#000}",
+    "[data-theme=dark]{--eg-point:#000;--eg-point-edge:#fff}",
+    ".eg-point{box-shadow:0 0 0 1.5px var(--eg-point-edge),0 0 0 4.5px var(--eg-point),0 0 0 6px var(--eg-point-edge)}",
+    ".eg-point-edge,.eg-point-band{fill:none;pointer-events:none;vector-effect:non-scaling-stroke;stroke-linejoin:round}",
+    ".eg-point-edge{stroke:var(--eg-point-edge);stroke-width:6px}",
+    ".eg-point-band{stroke:var(--eg-point);stroke-width:3px}",
+    ".eg-sr-only{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}",
+    "@keyframes eg-flash{to{opacity:.35}}",
+    ".eg-flash{animation:eg-flash .8s ease-in-out infinite alternate}",
+    "@media (prefers-reduced-motion:reduce){.eg-flash{animation:none}}"
   ].join("");
 
   function addStyle() {
@@ -1084,9 +1129,12 @@
     var header = make("header", { className: "eg-header" + (looksLikeKolibriGames() ? " eg-no-title" : "") }, [
       menu,
       make("h1", { className: "eg-title", "data-t": titleKey(), text: t(titleKey()) }),
-      make("button", { type: "button", className: "eg-options-button", "data-edugame-options": "", "data-t": "kit.options", text: t("kit.options") })
+      make("div", { className: "eg-buttons" }, [
+        make("button", { type: "button", className: "eg-options-button", "data-edugame-options": "", "data-t": "kit.options", text: t("kit.options") })
+      ])
     ]);
     document.body.insertBefore(header, document.body.firstChild);
+    if (keyParts.length) addKeysButton();
   }
 
   document.addEventListener("click", function (e) {
@@ -1562,6 +1610,94 @@
     return { stop: function () { document.removeEventListener("keydown", onKey); } };
   }
 
+  // addKeys(part): a game's keys. The kit puts a ⌨ button beside Options, opens the list of keys with it and with ?
+  // and /, and can run keys and show a hint (docs/ACCESSIBILITY.md).
+  //   part = { id, title: word key for its heading, when: fn (the part is in use now; default always),
+  //            hint: word key of a line shown for a few seconds the first time one of its keys is pressed,
+  //            keys: [ { keys: ["Tab"], label: "keys.k_tab", does: "keys.t_tab" },          the game handles it
+  //                    { keys: [".", ">", ";"], label, does, run: fn(e), when: fn },      the kit runs it
+  //                    { help: true } ] }                     where the kit's "? /  This list" row goes (default: last)
+  // A key is e.key ("Escape", "f": letters in either case); a digit also matches its key's place ("Digit0",
+  // "Numpad0"), so it works without Shift on a French keyboard. A row with hint: false never shows the hint.
+  // Parts show in the order they were added; headings only when more than one part is in use. Adding a part with an
+  // id already added replaces it.
+  var keyParts = [], keysPanel = null, keysBox = null, hintShown = {}, hintTimer = null;
+  function addKeys(part) {
+    keyParts = keyParts.filter(function (p) { return !part.id || p.id !== part.id; });
+    keyParts.push(part);
+    if (document.querySelector(".eg-header")) addKeysButton();
+  }
+  function addKeysButton() {
+    var box = document.querySelector(".eg-header .eg-buttons");
+    if (!box || box.querySelector(".eg-keys-button")) return;
+    var b = make("button", { type: "button", className: "eg-keys-button", "aria-haspopup": "dialog",
+                             "data-t-attr": "title:kit.keys_button,aria-label:kit.keys_button",
+                             title: t("kit.keys_button"), "aria-label": t("kit.keys_button"), text: "\u2328\uFE0E" });
+    b.addEventListener("click", openKeys);
+    box.insertBefore(b, box.firstChild);
+  }
+  function partOn(p) { return !p.when || p.when(); }
+  function rowOn(r) { return !r.when || r.when(); }
+  function openKeys() {
+    addStyle();
+    if (keysPanel && keysPanel.isOpen()) return;
+    if (keysBox && keysBox.parentNode) keysBox.parentNode.removeChild(keysBox);   // made again: the parts in use change
+    keysBox = make("div", { className: "eg-overlay eg-keys", hidden: "" });
+    document.body.appendChild(keysBox);
+    var parts = keyParts.filter(partOn), list = make("dl", {}), help = false;
+    parts.forEach(function (p) {
+      if (parts.length > 1 && p.title) list.appendChild(make("dt", { className: "eg-keys-part", role: "heading", "aria-level": "3", text: t(p.title) }));
+      var placed = false;
+      (p.keys || []).forEach(function (r) {
+        if (r.help) { placed = true; list.appendChild(make("dt", { text: t("kit.keys_help") })); list.appendChild(make("dd", { text: t("kit.keys_help_does") })); return; }
+        if (!rowOn(r) || !r.label) return;
+        list.appendChild(make("dt", { text: t(r.label) }));
+        list.appendChild(make("dd", { text: r.does ? t(r.does) : "" }));
+      });
+      if (!placed && p === parts[parts.length - 1] && !help) { list.appendChild(make("dt", { text: t("kit.keys_help") })); list.appendChild(make("dd", { text: t("kit.keys_help_does") })); }
+      help = help || placed;
+    });
+    var close = make("button", { type: "button", className: "eg-keys-close", "aria-label": t("kit.keys_close"), text: "\u00d7" });
+    var card = make("div", { className: "eg-card", "aria-labelledby": "eg-keys-title" },
+                    [close, make("h2", { id: "eg-keys-title", text: t("kit.keys_title") }), list]);
+    keysBox.appendChild(card);
+    keysPanel = dialog(keysBox, { card: card, close: close });
+    keysPanel.open();
+  }
+  function closeKeys() { if (keysPanel) keysPanel.close(); }
+  function keyMatches(r, e) {
+    for (var i = 0; i < (r.keys || []).length; i++) {
+      var k = r.keys[i];
+      if (k === e.key || (k.length === 1 && e.key && k.toLowerCase() === e.key.toLowerCase())) return true;
+      if (/^[0-9]$/.test(k) && (e.code === "Digit" + k || e.code === "Numpad" + k)) return true;
+      if (k === e.code) return true;
+    }
+    return false;
+  }
+  function showKeyHint(word) {
+    var el = document.querySelector(".eg-key-hint");
+    if (!el) { addStyle(); el = make("div", { className: "eg-key-hint", "aria-hidden": "true" }); document.body.appendChild(el); }
+    el.textContent = t(word);
+    el.hidden = false;
+    clearTimeout(hintTimer);
+    hintTimer = setTimeout(function () { el.hidden = true; }, 8000);
+  }
+  document.addEventListener("keydown", function (e) {
+    if (!keyParts.length || e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey || e.isComposing) return;
+    var tg = e.target;
+    if (tg && /^(INPUT|SELECT|TEXTAREA)$/.test(tg.tagName)) return;
+    if (up(tg, function (n) { return n.getAttribute("aria-modal") === "true" || (n.className && String(n.className).indexOf("eg-overlay") >= 0); })) return;
+    if (e.key === "?" || e.key === "/") { e.preventDefault(); openKeys(); return; }
+    var parts = keyParts.filter(partOn);
+    for (var i = 0; i < parts.length; i++) {
+      var rows = (parts[i].keys || []).filter(function (r) { return !r.help && rowOn(r) && keyMatches(r, e); });
+      if (!rows.length) continue;
+      if (parts[i].hint && !hintShown[parts[i].id || i] && rows[0].hint !== false) { hintShown[parts[i].id || i] = true; showKeyHint(parts[i].hint); }
+      if (rows[0].run) { e.preventDefault(); rows[0].run(e); }
+      return;
+    }
+  });
+
   window.EduGame = {
     version: VERSION,
     MAX_SAVE: MAX_SAVE,
@@ -1596,6 +1732,11 @@
     say: say,
     dialog: dialog,
     arrowNav: arrowNav,
+    addKeys: addKeys,
+    openKeys: openKeys,
+    closeKeys: closeKeys,
+    keysOpen: function () { return !!(keysPanel && keysPanel.isOpen()); },
+    showKeyHint: showKeyHint,
     // content
     load: load,
     loadLanguage: loadLanguage,

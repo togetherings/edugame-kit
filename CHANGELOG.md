@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.3.10
+
+### What games need to do
+
+- Nothing. The header's Options button is now inside `<div class="eg-buttons">`: a game whose own CSS styles
+  `.eg-header > button` should style `.eg-header .eg-options-button` instead.
+
+### Changes
+
+- **`EduGame.addKeys`: a game's list of keys.** A game describes its keys in parts; the kit puts a ⌨ button
+  beside Options, opens the list of keys with it and with `?` and `/` (lined up, a heading per part when more than
+  one is in use, a row only where it applies), runs the keys given a `run`, matches digits by their place on the
+  keyboard (for French keyboards), and shows a line of help the first time a key is pressed. Also
+  `EduGame.openKeys()`, `closeKeys()`, `keysOpen()` and `showKeyHint(word)`. New kit words: `kit.keys_button`,
+  `kit.keys_title`, `kit.keys_help`, `kit.keys_help_does`, `kit.keys_close` (in English, French, Spanish and
+  Portuguese).
+- **Colour starting points** in the kit's styles: `--eg-good`, `--eg-retry`, `--eg-bad` (Okabe-Ito), the pointing
+  outline (`--eg-point`, `--eg-point-edge`, `.eg-point`, `.eg-point-edge`, `.eg-point-band`), `.eg-flash` (stops
+  under "reduce motion") and `.eg-sr-only`.
+- **Hover on the kit's buttons**: Options, the link to the menu and the Options panel's buttons fill with the accent
+  colour on hover and with the keyboard alike, and a choice in the panel is shaded on hover.
+- **`edugame.testing`**: checks for a game's browser test: the list of keys (`check_keys_list`) and any panel
+  (`check_panel`: it has the keyboard, keeps it, closes with Escape and gives it back).
+- docs/ACCESSIBILITY.md covers all of these.
+
 ## 0.3.9
 
 ### What games need to do
