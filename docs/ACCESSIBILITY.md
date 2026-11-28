@@ -12,9 +12,17 @@ and is the example to copy from.
   applies, and the keyboard goes back to the Options button when it closes.
 - **The starter menu** (`edugame menu`): Tab and Enter, the arrow keys to the nearest package in that direction
   (from nowhere, to "Next"), Home and End to the first and last, and 1-9 for the package with that number.
-- **Three helpers** (docs/HELPER.md has the full list of calls):
+- **Your list of keys** (`EduGame.addKeys`, below): a ⌨ button beside Options in the header, the list of keys
+  (also `?` and `/`), keys the kit runs for you, digits matched by their place on the keyboard, and a line of help
+  the first time a key is pressed.
+- **Colour starting points**: Okabe-Ito answer colours, a pointing outline that shows on any colour, text only
+  screen readers read, and a flash that stops when the device asks for less motion (below). Hover and the keyboard
+  look the same on the kit's own buttons.
+- **Checks for your browser test**: `edugame.testing` (below).
+- **Three more helpers** (docs/HELPER.md has the full list of calls):
   - `EduGame.say(text)`: screen readers read the text out. Use it for the prompt, for right and wrong answers, and
-    for anything else that changes on the screen without the keyboard moving. `{urgent: true}` interrupts.
+    for anything else that changes on the screen without the keyboard moving. `{urgent: true}` interrupts. Things
+    said at the same moment (a wrong answer, then the place's name) are read together.
   - `EduGame.dialog(el, {close, focus})` → `{open(), close(), isOpen()}`: a panel (help, information, a big
     picture) that holds the keyboard while it's open. Tab stays inside, Escape and a click on its backdrop close
     it, and the keyboard goes back to whatever had it. It marks the panel as a dialog for screen readers.
@@ -28,6 +36,60 @@ document.getElementById("helpButton").onclick = help.open;
 EduGame.arrowNav(document.getElementById("levels"), "button.level");
 EduGame.say(EduGame.t("find", { name: "Ghana" }));
 ```
+
+### Your list of keys: `EduGame.addKeys`
+A game describes its keys in parts (a menu, a board), once, as the page starts. The kit then shows a ⌨ button
+beside Options, and opens the list of keys with it and with `?` and `/` (as an `EduGame.dialog`). A part is shown
+while its `when()` is true; headings show only when more than one part is in use, and each part's rows line up in
+the same two columns. Words are word keys from `lang/`, like any other words.
+
+```js
+EduGame.addKeys({ id: "board", title: "keys.on_board", when: function () { return playing; },
+  hint: "keys.hint",                       // "Tab or Arrows: Move · Enter: Choose · ?: List of keys", once
+  keys: [
+    { keys: ["Tab"], label: "keys.k_tab", does: "keys.t_tab" },              // listed; the game handles it
+    { keys: [".", ">", ";"], label: "keys.k_skip", does: "keys.t_skip", run: skip },   // the kit runs it
+    { keys: ["0", "Home"], label: "keys.k_full", does: "keys.t_full", run: showAll },  // 0 by its place too
+    { keys: ["f", "d"], label: "keys.k_flag", does: "keys.t_flag", run: bigFlag,
+      when: function () { return mode === "flags"; } },                      // listed and run only in Flags mode
+    { help: true },                                                          // "? /  This list" goes here
+    { keys: ["Escape"], label: "keys.k_menu", does: "keys.t_menu", run: leave, hint: false }
+  ] });
+```
+
+- A key is the `e.key` value; a letter matches in either case, and a digit also matches its key's place (`Digit0`,
+  `Numpad0`), so it works without Shift on a French keyboard. The kit runs a row with `run` (and stops the browser
+  using that key); a row without `run` is only listed and the game handles the key itself.
+- The kit leaves keys alone in form fields, in the Options panel and in any open dialog, and Escape closes an open
+  dialog before anything else, so a game's own Escape (back to the menu) only runs when nothing is open.
+- `hint`: the line shows for 8 seconds the first time one of the part's keys is pressed on the page (not for rows
+  with `hint: false`). It can be a function giving the word key, or nothing when no hint is wanted at that moment. `EduGame.showKeyHint(word)` shows a line whenever you like.
+- `EduGame.openKeys()` opens the list from your own button (when `options.header` is false there's no header).
+
+### Colour starting points
+The kit's styles give every page these, to use or to change:
+
+| | |
+|---|---|
+| `--eg-good`, `--eg-retry`, `--eg-bad` | Okabe-Ito bluish green `#009E73`, yellow `#F0E442` and vermillion `#D55E00`: right first time, right later, wrong |
+| `--eg-point`, `--eg-point-edge` | the pointing outline: white edged with black (dark theme: black edged with white) |
+| `.eg-point` | puts the pointing outline round an HTML element (a card, a tile) |
+| `.eg-point-edge`, `.eg-point-band` | the same for an SVG shape: draw two copies of its outline on top of everything, the edge (6 px) then the band (3 px) |
+| `.eg-flash` | a gentle flash, which stops under "reduce motion" |
+| `.eg-sr-only` | text that only screen readers read |
+
+### Checks for your browser test
+`edugame.testing` has checks for Playwright tests (`pip install playwright`):
+
+```python
+from edugame import testing
+rows = testing.check_keys_list(page, where=frame)    # ? and / open the list, Tab stays in it, Escape closes it
+testing.check_panel(page, lambda: frame.click("#info"), "#infoPanel", where=frame, opener="#info")
+```
+
+`check_panel` opens a panel and checks that it has the keyboard, keeps it while Tab and Shift+Tab are pressed,
+closes with Escape and gives the keyboard back. `check_keys_list` does that for each of `?` and `/`, and returns the
+list's rows so a test can check them.
 
 ## What a game does
 
@@ -44,13 +106,11 @@ EduGame.say(EduGame.t("find", { name: "Ghana" }));
   - match digits by the key's place (`e.code === "Digit0"` or `"Numpad0"`), not only `e.key === "0"`;
   - in each language's list of keys, show the keys that are easiest on that language's usual keyboard.
 - **Avoid keys the browser keeps for itself** (Ctrl+W, Ctrl+T, F5, F11, F12) and F1, which opens Chrome's help.
-- **A list of keys**: a button (⌨) and `?` (and `/`) open it, as a `dialog`. Put the keys in one two-column list
-  so they line up, with headings for parts (the menu's keys, the board's keys), and show a row only where it
-  applies. Write the keys and what they do in `lang/` like any other words.
+- **A list of keys**: describe your keys with `EduGame.addKeys`, in parts, with a row only where it applies. Write
+  the keys and what they do in `lang/` like any other words.
 - **Where the keyboard goes**: back to the button that opened a panel; back to the level's button when a round
   is left; to "Play again" on the results.
-- **A hint the first time**: the first key pressed in a round can show one line of help for a few seconds
-  ("Tab or Arrows: Move · Enter: Choose · ?: List of keys").
+- **A hint the first time**: give the part a `hint` ("Tab or Arrows: Move · Enter: Choose · ?: List of keys").
 
 ### Screen readers
 - Say the prompt and every right or wrong answer with `EduGame.say`.
@@ -148,11 +208,6 @@ The rest of SINGE's colours, for reference:
 - Turn on "reduce motion" in the system settings and play again.
 - Look at every screen in light and dark, and through a colour-blindness simulator.
 - In Firefox, check that no key you use opens Quick Find.
-- A browser test can press the keys (Playwright's `page.keyboard.press`) and check where the keyboard is
-  (`document.activeElement`); SINGE's `check_keyboard` in tests/e2e_browser.py is an example.
-
-## Coming next
-
-The kit will take a game's list of keys and do the rest: a ⌨ button beside Options in its header, the list of keys
-(lined up, in parts, per language), `?` and `/`, the order Escape closes things in, digits by the key's place, and
-the first-key hint. Until then, a game does these itself as above.
+- In a browser test, `edugame.testing` checks the list of keys and every panel; press the game's keys with
+  Playwright's `page.keyboard.press` and check where the keyboard is (`testing.focused`). SINGE's
+  `check_keyboard` in tests/e2e_browser.py is an example.

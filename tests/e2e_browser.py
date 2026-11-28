@@ -435,7 +435,7 @@ def check_starter_menu(browser, shots):
     import shutil
     from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 
-    from edugame import cli, pages
+    from edugame import cli, pages, testing
     from tests.test_languages import packaged
 
     work = tempfile.mkdtemp(prefix="edugame-starter-")
@@ -504,6 +504,30 @@ def check_starter_menu(browser, shots):
         page.keyboard.press("Escape")
         assert page.evaluate("dlg.isOpen()") is False and page.evaluate("document.getElementById('dlg').hidden")
         assert "next" in focused(), focused()                                   # the keyboard goes back
+        # EduGame.addKeys: a ⌨ button beside Options, the list of keys (? and /), keys the kit runs, the hint
+        page.evaluate("""() => {
+            window.ran = 0;
+            EduGame.addKeys({ id: 'menu', title: 'kit.menu', hint: 'kit.menu_next', keys: [
+                { keys: ['Tab'], label: 'kit.menu', does: 'kit.menu_heading' },
+                { keys: ['x', 'X'], label: 'kit.apply', does: 'kit.back', run: () => { window.ran++; } },
+                { keys: ['0'], label: 'kit.language', does: 'kit.appearance', run: () => { window.ran += 10; } },
+                { help: true },
+                { keys: ['q'], label: 'kit.theme_dark', does: 'kit.theme_light', when: () => false } ] });
+            EduGame.addKeys({ id: 'other', title: 'kit.options', when: () => window.otherOn, keys: [
+                { keys: ['k'], label: 'kit.theme_auto', does: 'kit.theme_auto_hint' } ] });
+        }""")
+        assert page.locator(".eg-header .eg-buttons .eg-keys-button + .eg-options-button").count() == 1
+        assert page.get_attribute(".eg-keys-button", "aria-label") == "Touches du clavier"
+        rows = testing.check_keys_list(page)
+        assert rows == [("Menu", "Leçons"), ("Appliquer", "Retour"), ("Langue", "Apparence"), ("? /", "Cette liste")], rows
+        page.evaluate("window.otherOn = true")
+        rows = testing.check_keys_list(page, keys=("?",))
+        assert rows[0] == ("Menu", None) and rows[-2:] == [("Options", None), ("Auto", "(suit le réglage clair ou sombre de cet appareil)")], rows
+        page.keyboard.press("X")
+        page.keyboard.press("Digit0")                                           # the 0 key by its place (AZERTY: à)
+        assert page.evaluate("window.ran") == 11
+        assert page.locator(".eg-key-hint").inner_text() == "Suivante"         # the first key showed the hint
+        testing.check_panel(page, lambda: page.click(".eg-keys-button"), ".eg-keys", opener=".eg-keys-button")
         page.keyboard.press("Digit2")
         page.wait_for_url("**/game/fr/*/")
         context.close()

@@ -69,6 +69,10 @@ EduGame.goTo(EduGame.site().next);   // another page of the site (also in its on
 EduGame.say("Find Ghana");                       // screen readers read it out ({urgent: true} interrupts)
 var help = EduGame.dialog(panel, { close: closeButton });   // help.open(): holds the keyboard; Escape closes
 EduGame.arrowNav(levelList, "button");           // arrow keys between buttons; Home, End; {numbers: true}: 1-9
+EduGame.addKeys({ id: "board", title: "keys.on_board", hint: "keys.hint", keys: [
+  { keys: [".", ">"], label: "keys.k_skip", does: "keys.t_skip", run: skip }, { help: true }] });
+                                                 // a ⌨ button beside Options, the list of keys (? and /)
+EduGame.openKeys();                              // open the list of keys from your own button
 
 // Only do something on the Kolibri Games games page (safe to call anywhere):
 EduGame.move("guess", { value: 42 });   // coaches see every move
