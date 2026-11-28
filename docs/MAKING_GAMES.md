@@ -38,6 +38,8 @@ Don't add `edugame.js`, `edugame-config.js`, `kolibri-game.json`, `imsmanifest.x
 - **Keep saves small:** at most 3,900 characters as JSON, because SCORM 1.2 allows 4,096. Save
   what the learner has done (levels, stars, unlocked words), not the whole game.
 - **Keep it light.** Games run on old phones and laptops, often from a Raspberry Pi.
+- **Make it playable by everyone:** with a keyboard alone, with a screen reader, with colour blindness. See
+  [ACCESSIBILITY.md](ACCESSIBILITY.md).
 
 ## `edugame.json`
 
