@@ -29,6 +29,7 @@
       if (opts.count !== false) { counted++; if (pkg.done) { done++; } }
       var b = make("button", "eg-menu-item" + (pkg.done ? " done" : "") + (opts.wide ? " wide" : ""));
       b.type = "button";
+      if (!opts.mark) { b.setAttribute("data-number", String(n)); }   // (its number key: 1-9)
       var mark = make("span", "eg-menu-mark", pkg.done ? "✓" : (opts.mark || String(n)));
       mark.setAttribute("aria-hidden", "true");
       var text = make("span", "eg-menu-text");
@@ -52,6 +53,44 @@
     var more = site.languages.filter(function (l) { return l.packages > site.packages.length; });
     el("egMenuMore").hidden = !more.length;
     el("egMenuMore").textContent = t("kit.menu_more", { names: more.map(function (l) { return l.name; }).join(", ") });
+  }
+
+  // Keys: Tab and Enter as usual; the arrow keys go to the nearest package in that direction (from nowhere: to "Next"),
+  // Home and End to the first and last, and 1-9 open the package with that number (by the key's place, so they work
+  // without Shift on a French keyboard).
+  document.addEventListener("keydown", function (e) {
+    if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey) { return; }   // (the Options panel took it)
+    var tg = e.target;
+    if ((tg && tg.closest && tg.closest(".eg-overlay")) || (tg && /^(INPUT|SELECT|TEXTAREA)$/.test(tg.tagName))) { return; }
+    var items = el("egMenuList").querySelectorAll(".eg-menu-item");
+    if (!items.length) { return; }
+    var digit = /^(Digit|Numpad)([1-9])$/.exec(e.code || "") || (/^[1-9]$/.test(e.key) ? [0, 0, e.key] : null);
+    if (digit) {
+      for (var i = 0; i < items.length; i++) {
+        if (items[i].getAttribute("data-number") === digit[2]) { e.preventDefault(); items[i].click(); return; }
+      }
+      return;
+    }
+    var dir = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[e.key];
+    if (!dir && e.key !== "Home" && e.key !== "End") { return; }
+    e.preventDefault();
+    var cur = document.activeElement, inList = cur && cur.classList && cur.classList.contains("eg-menu-item");
+    if (e.key === "Home") { items[0].focus(); }
+    else if (e.key === "End") { items[items.length - 1].focus(); }
+    else if (!inList) { (el("egMenuList").querySelector(".eg-menu-item.next") || items[0]).focus(); }
+    else { var to = nearest(cur, items, dir[0], dir[1]); if (to) { to.focus(); } }
+  });
+  // The nearest button in a direction: its middle mostly along the arrow, a little across.
+  function nearest(from, list, dx, dy) {
+    var a = from.getBoundingClientRect(), ax = a.left + a.width / 2, ay = a.top + a.height / 2, best = null, bestScore = 1e9;
+    for (var i = 0; i < list.length; i++) {
+      if (list[i] === from) { continue; }
+      var c = list[i].getBoundingClientRect(), x = c.left + c.width / 2 - ax, y = c.top + c.height / 2 - ay;
+      var along = x * dx + y * dy, across = Math.abs(x * dy) + Math.abs(y * dx);
+      if (along < 4) { continue; }
+      if (along + 2 * across < bestScore) { bestScore = along + 2 * across; best = list[i]; }
+    }
+    return best;
   }
 
   if (!site) { return; }                     // only on the website and in the offline copy

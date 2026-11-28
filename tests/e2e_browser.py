@@ -245,7 +245,7 @@ def check_options(browser, base, shots):
     assert frame.locator(".eg-title").inner_text() == "Memory Match"      # the language waits for Apply
     if shots:
         page.screenshot(path=os.path.join(shots, "6-options.png"))
-    card.locator("button.eg-primary").click()
+    page.keyboard.press("Enter")                                          # Enter on a choice (Français, clicked) applies
     frame.locator(".eg-title:has-text('Paires de cartes')").wait_for()
     frame.locator(".eg-options-button:has-text('Options')").wait_for()
     frame.locator("[data-t=again]:has-text('Rejouer')").wait_for(state="attached")

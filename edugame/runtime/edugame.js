@@ -1156,6 +1156,10 @@
     }
     function onKey(e) {
       if (e.key === "Escape") { e.preventDefault(); cancel(); return; }
+      // Enter on a choice applies, as in most dialogs (on a button, Enter presses that button as usual)
+      if (e.key === "Enter" && !e.isComposing && e.target && e.target.type === "radio" && card.contains(e.target)) {
+        e.preventDefault(); apply.click(); return;
+      }
       if (e.key !== "Tab") return;
       // Keep the keyboard inside the panel while it's open.
       // Tab stops: each group's chosen radio button (or its first), then the buttons.

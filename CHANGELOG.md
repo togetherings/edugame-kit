@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.3.9
+
+### What games need to do
+
+- Nothing. A game that made its menu with `edugame menu` before this release can copy the new keys from
+  `edugame/templates/menu/menu/menu.js` into its own `menu/menu.js`.
+
+### Changes
+
+- **Options: Enter on a choice applies**, as in most dialogs. Before, Enter did nothing until Apply had the keyboard.
+- **The starter menu's keys**: the arrow keys go to the nearest package in that direction (from nowhere, to "Next"),
+  Home and End to the first and last, and 1-9 open the package with that number. Tab and Enter work as before.
+
 ## 0.3.8
 
 ### What games need to do
