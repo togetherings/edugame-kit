@@ -38,10 +38,39 @@ def test_the_command_is_there(capsys):
 
 
 def test_the_shell_scripts_are_shipped_with_the_kit():
-    for name in ("setup_channel.py", "read_record.py"):
+    for name in ("setup_channel.py",):
         assert os.path.isfile(os.path.join(kolibri_test.SCRIPTS, name))
     pyproject = open(os.path.join(os.path.dirname(TEMPLATES), "..", "pyproject.toml")).read()
     assert '"kolibri/*"' in pyproject
+
+
+def kolibri_db(path, extra_fields):
+    """A database with the two tables of Kolibri's that read_record and damage_record use."""
+    import sqlite3
+    db = sqlite3.connect(path)
+    db.execute("CREATE TABLE kolibriauth_facilityuser (id TEXT, username TEXT)")
+    db.execute("CREATE TABLE logger_contentsummarylog (id TEXT, user_id TEXT, content_id TEXT, progress REAL,"
+               " time_spent REAL, extra_fields TEXT, _morango_dirty_bit INTEGER)")
+    db.execute("INSERT INTO kolibriauth_facilityuser VALUES ('u1', 'learner'), ('u2', 'someone')")
+    db.execute("INSERT INTO logger_contentsummarylog VALUES ('l1', 'u1', 'abc123', 1.0, 9.5, ?, 0)", (json.dumps(extra_fields),))
+    db.execute("INSERT INTO logger_contentsummarylog VALUES ('l2', 'u2', 'abc123', 0.0, 1.0, '{}', 0)")
+    db.commit()
+    db.close()
+
+
+def test_what_kolibri_recorded_is_read_and_damaged_in_its_database(tmp_path):
+    path = str(tmp_path / "db.sqlite3")
+    save = json.dumps({"_v": 1, "_save": {"level": 3}})
+    kolibri_db(path, {"contentState": {"SCORM": {"cmi": {"suspend_data": save,
+                                                          "core": {"lesson_status": "passed", "exit": "suspend"}}}}})
+    rec = kolibri_test.read_record(path, "learner", "abc123")
+    assert rec == {"found": True, "progress": 1.0, "time_spent": 9.5, "status": "passed", "exit": "suspend",
+                   "score_raw": None, "suspend_data": save}
+    assert kolibri_test.read_record(path, "learner", "nothing") == {"found": False}
+    damaged = kolibri_test.damage_record(path, "learner", "abc123")
+    assert damaged == save[: len(save) // 2]
+    assert kolibri_test.read_record(path, "learner", "abc123")["suspend_data"] == damaged
+    assert kolibri_test.read_record(path, "someone", "abc123")["suspend_data"] == ""     # only the learner's
 
 
 def record(**cmi):
