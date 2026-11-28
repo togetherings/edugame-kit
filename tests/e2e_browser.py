@@ -245,7 +245,7 @@ def check_options(browser, base, shots):
     assert frame.locator(".eg-title").inner_text() == "Memory Match"      # the language waits for Apply
     if shots:
         page.screenshot(path=os.path.join(shots, "6-options.png"))
-    card.locator("button.eg-primary").click()
+    page.keyboard.press("Enter")                                          # Enter on a choice (Français, clicked) applies
     frame.locator(".eg-title:has-text('Paires de cartes')").wait_for()
     frame.locator(".eg-options-button:has-text('Options')").wait_for()
     frame.locator("[data-t=again]:has-text('Rejouer')").wait_for(state="attached")
@@ -476,6 +476,36 @@ def check_starter_menu(browser, shots):
         assert "next" in items.nth(1).get_attribute("class")
         if shots:
             page.screenshot(path=os.path.join(shots, "7-starter-menu.png"), full_page=True)
+        # Keys (EduGame.arrowNav): from nowhere an arrow goes to "Next"; Home and End; 2 opens the second package
+        focused = lambda: page.evaluate("document.activeElement.className")
+        page.keyboard.press("ArrowDown")
+        assert "next" in focused(), focused()
+        page.keyboard.press("Home")
+        assert "done" in focused(), focused()
+        page.keyboard.press("End")
+        assert "next" in focused(), focused()
+        # EduGame.say and EduGame.dialog
+        page.evaluate("EduGame.say('Bonjour')")
+        page.wait_for_function("document.querySelector('.eg-say[aria-live=polite]').textContent === 'Bonjour'")
+        page.evaluate("""() => {
+            const back = document.createElement('div'); back.id = 'dlg'; back.hidden = true;
+            back.innerHTML = '<div id="dlgCard"><button id="a">A</button><button id="b">B</button></div>';
+            document.body.appendChild(back);
+            window.dlg = EduGame.dialog(back, { card: document.getElementById('dlgCard'), close: document.getElementById('b') });
+        }""")
+        page.evaluate("dlg.open()")
+        assert page.evaluate("document.activeElement.id") == "a"
+        assert page.get_attribute("#dlgCard", "role") == "dialog"
+        page.keyboard.press("Tab")
+        page.keyboard.press("Tab")
+        assert page.evaluate("document.activeElement.id") == "a"                 # Tab stays inside
+        page.keyboard.press("ArrowRight")                                       # arrowNav leaves a dialog alone
+        assert page.evaluate("document.activeElement.id") == "a"
+        page.keyboard.press("Escape")
+        assert page.evaluate("dlg.isOpen()") is False and page.evaluate("document.getElementById('dlg').hidden")
+        assert "next" in focused(), focused()                                   # the keyboard goes back
+        page.keyboard.press("Digit2")
+        page.wait_for_url("**/game/fr/*/")
         context.close()
         assert not errors, errors
     finally:

@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.3.9
+
+### What games need to do
+
+- Nothing. A game that made its menu with `edugame menu` before this release can add its keys with one line in
+  its `menu/menu.js`: `EduGame.arrowNav(el("egMenuList"), ".eg-menu-item", { numbers: true, start: ".next" });`
+  (and give each package button its `data-number`, as `edugame/templates/menu/menu/menu.js` does).
+
+### Changes
+
+- **docs/ACCESSIBILITY.md**: what the kit does and what a game must do for keyboard play, screen readers, colour
+  blindness, motion and touch, with colour-blind-friendly palettes (Okabe-Ito, and Paul Tol's bright, vibrant,
+  muted, light and high contrast, with every colour) and SINGE's colours as an example.
+- **`EduGame.say(text)`**: screen readers read the text out (a hidden live region).
+- **`EduGame.dialog(el, {close, focus})`**: a panel that holds the keyboard while it's open (Tab stays inside,
+  Escape and its backdrop close it) and gives it back to whatever had it.
+- **`EduGame.arrowNav(container, selector, {numbers, start})`**: the arrow keys move between buttons in a grid
+  (to the nearest one that way), Home and End to the first and last, and 1-9 press numbered buttons.
+- **Options: Enter on a choice applies**, as in most dialogs. Before, Enter did nothing until Apply had the keyboard.
+- **The starter menu's keys**: the arrow keys go to the nearest package in that direction (from nowhere, to "Next"),
+  Home and End to the first and last, and 1-9 open the package with that number. Tab and Enter work as before.
+
 ## 0.3.8
 
 ### What games need to do

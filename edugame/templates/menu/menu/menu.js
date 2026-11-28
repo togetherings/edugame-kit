@@ -29,6 +29,7 @@
       if (opts.count !== false) { counted++; if (pkg.done) { done++; } }
       var b = make("button", "eg-menu-item" + (pkg.done ? " done" : "") + (opts.wide ? " wide" : ""));
       b.type = "button";
+      if (!opts.mark) { b.setAttribute("data-number", String(n)); }   // (its number key: 1-9)
       var mark = make("span", "eg-menu-mark", pkg.done ? "✓" : (opts.mark || String(n)));
       mark.setAttribute("aria-hidden", "true");
       var text = make("span", "eg-menu-text");
@@ -53,6 +54,10 @@
     el("egMenuMore").hidden = !more.length;
     el("egMenuMore").textContent = t("kit.menu_more", { names: more.map(function (l) { return l.name; }).join(", ") });
   }
+
+  // Keys: Tab and Enter as usual; the arrow keys go to the nearest package in that direction (from nowhere: to "Next"),
+  // Home and End to the first and last, and 1-9 open the package with that number.
+  EduGame.arrowNav(el("egMenuList"), ".eg-menu-item", { numbers: true, start: ".next" });
 
   if (!site) { return; }                     // only on the website and in the offline copy
   EduGame.ready().then(render);

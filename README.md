@@ -76,6 +76,7 @@ planned: see [docs/LTI.md](docs/LTI.md).
 - [docs/HELPER.md](docs/HELPER.md): the save helper's calls, and what it saves where
 - [docs/UPDATING.md](docs/UPDATING.md): how games get new kit releases (Dependabot pull requests)
 - [docs/LANGUAGES.md](docs/LANGUAGES.md): words, languages, the Options button, content and packages
+- [docs/ACCESSIBILITY.md](docs/ACCESSIBILITY.md): keyboard play, screen readers, colour-blind-friendly palettes
 - [CHANGELOG.md](CHANGELOG.md)
 
 ## Development

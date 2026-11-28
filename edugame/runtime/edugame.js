@@ -68,6 +68,17 @@
  *                               (the word kit.menu), and Options changes language by going to
  *                               the same package (or the menu) in that language.
  *
+ * Accessibility (docs/ACCESSIBILITY.md).
+ *
+ *   EduGame.say(text, {urgent})  screen readers read the text out (prompts, right and wrong answers)
+ *   EduGame.dialog(el, {close, focus, onClose, show, hide})
+ *                               -> {open(), close(), isOpen()}: a panel that holds the keyboard while it's
+ *                               open (Tab stays inside, Escape and a click on its backdrop close it) and
+ *                               gives it back to whatever had it
+ *   EduGame.arrowNav(container, selector, {numbers, start})
+ *                               the arrow keys move between those buttons (the nearest one that way),
+ *                               Home and End to the first and last; numbers: 1-9 press data-number buttons
+ *
  * Content (maps, lessons, word lists: the folders under "content" in edugame.json).
  *
  *   EduGame.load("words/fr.json")          -> Promise of the data, or null
@@ -1156,6 +1167,10 @@
     }
     function onKey(e) {
       if (e.key === "Escape") { e.preventDefault(); cancel(); return; }
+      // Enter on a choice applies, as in most dialogs (on a button, Enter presses that button as usual)
+      if (e.key === "Enter" && !e.isComposing && e.target && e.target.type === "radio" && card.contains(e.target)) {
+        e.preventDefault(); apply.click(); return;
+      }
       if (e.key !== "Tab") return;
       // Keep the keyboard inside the panel while it's open.
       // Tab stops: each group's chosen radio button (or its first), then the buttons.
@@ -1425,6 +1440,128 @@
     if (backend && backend.exit) backend.exit();
   }
 
+  // ------------------------------------------------------- accessibility
+  // Small helpers for keyboard and screen-reader play (docs/ACCESSIBILITY.md).
+
+  // say(text): screen readers read the text out (a hidden "live region"). {urgent: true} interrupts what they're
+  // reading. Saying the same text twice reads it twice.
+  var sayAreas = {};
+  function say(text, opts) {
+    var urgent = !!(opts && opts.urgent), area = sayAreas[urgent ? "a" : "p"];
+    if (!area) {
+      area = document.createElement("div");
+      area.className = "eg-say";
+      area.setAttribute("aria-live", urgent ? "assertive" : "polite");
+      area.setAttribute("role", urgent ? "alert" : "status");
+      area.style.cssText = "position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0";
+      (document.body || document.documentElement).appendChild(area);
+      sayAreas[urgent ? "a" : "p"] = area;
+    }
+    area.textContent = "";
+    setTimeout(function () { area.textContent = text == null ? "" : String(text); }, 30);
+  }
+
+  function focusables(root) {
+    return Array.prototype.filter.call(root.querySelectorAll(
+      "button, [href], input, select, textarea, [tabindex]:not([tabindex='-1'])"), function (el) {
+      return !el.disabled && el.getClientRects().length > 0;
+    });
+  }
+
+  // dialog(el, {close, focus, onClose, show, hide}): a panel over the page. open() shows it (the hidden attribute,
+  // or show(el)), marks it as a dialog, and gives it the keyboard: Tab stays inside it, Escape closes it, a click on
+  // el itself (its backdrop) closes it, and close() gives the keyboard back to whatever had it before.
+  //   close   an element inside that closes it (a × button)      focus   what gets the keyboard first
+  //   onClose called after it closes                               show / hide  your own way to show and hide it
+  function dialog(el, opts) {
+    opts = opts || {};
+    var opener = null, isOpen = false, card = opts.card || el;
+    if (!card.getAttribute("role")) card.setAttribute("role", "dialog");
+    card.setAttribute("aria-modal", "true");
+    function onKey(e) {
+      if (!isOpen || e.defaultPrevented) return;
+      if (e.key === "Escape") { e.preventDefault(); close(); return; }
+      if (e.key !== "Tab") return;
+      var list = focusables(card);
+      if (!list.length) { e.preventDefault(); return; }
+      var first = list[0], last = list[list.length - 1], at = document.activeElement;
+      if (!card.contains(at)) { e.preventDefault(); first.focus(); }
+      else if (e.shiftKey && at === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && at === last) { e.preventDefault(); first.focus(); }
+    }
+    function onClick(e) { if (isOpen && e.target === el) close(); }
+    function open() {
+      if (isOpen) return;
+      opener = document.activeElement;
+      if (opts.show) opts.show(el); else el.hidden = false;
+      isOpen = true;
+      document.addEventListener("keydown", onKey, true);
+      var f = (typeof opts.focus === "string" ? card.querySelector(opts.focus) : opts.focus) || focusables(card)[0] || card;
+      if (f === card && !card.hasAttribute("tabindex")) card.setAttribute("tabindex", "-1");
+      f.focus();
+    }
+    function close() {
+      if (!isOpen) return;
+      isOpen = false;
+      document.removeEventListener("keydown", onKey, true);
+      if (opts.hide) opts.hide(el); else el.hidden = true;
+      if (opener && opener.focus && document.body.contains(opener)) opener.focus();
+      if (opts.onClose) opts.onClose();
+    }
+    el.addEventListener("click", onClick);
+    if (opts.close) opts.close.addEventListener("click", close);
+    return { open: open, close: close, isOpen: function () { return isOpen; } };
+  }
+
+  // arrowNav(container, selector, {numbers, start}): the arrow keys move the keyboard between the buttons matching
+  // selector inside container, to the nearest one in that direction (for any grid, however it wraps); Home and End
+  // go to the first and last. From outside the buttons an arrow goes to the first one, or to `start` (a selector:
+  // ".next"). numbers: true makes 1-9 press the button with that data-number (by the key's place, so they work
+  // without Shift on a French keyboard). Keys inside a dialog, a form field or the Options panel are left alone.
+  function arrowNav(container, selector, opts) {
+    opts = opts || {};
+    function nearest(from, list, dx, dy) {
+      var a = from.getBoundingClientRect(), ax = a.left + a.width / 2, ay = a.top + a.height / 2, best = null, bestScore = 1e9;
+      for (var i = 0; i < list.length; i++) {
+        if (list[i] === from) continue;
+        var c = list[i].getBoundingClientRect(), x = c.left + c.width / 2 - ax, y = c.top + c.height / 2 - ay;
+        var along = x * dx + y * dy, across = Math.abs(x * dy) + Math.abs(y * dx);
+        if (along < 4) continue;
+        if (along + 2 * across < bestScore) { bestScore = along + 2 * across; best = list[i]; }
+      }
+      return best;
+    }
+    function onKey(e) {
+      if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey) return;
+      var tg = e.target;
+      if (tg && /^(INPUT|SELECT|TEXTAREA)$/.test(tg.tagName)) return;
+      if (up(tg, function (n) { return n.getAttribute("aria-modal") === "true" || (n.className && String(n.className).indexOf("eg-overlay") >= 0); })) return;
+      if (!container.offsetParent && container.getClientRects().length === 0) return;   // not on screen
+      var items = Array.prototype.filter.call(container.querySelectorAll(selector), function (b) { return b.getClientRects().length > 0; });
+      if (!items.length) return;
+      if (opts.numbers) {
+        var digit = /^(Digit|Numpad)([1-9])$/.exec(e.code || "") || (/^[1-9]$/.test(e.key) ? [0, 0, e.key] : null);
+        if (digit) {
+          for (var i = 0; i < items.length; i++) {
+            if (items[i].getAttribute("data-number") === digit[2]) { e.preventDefault(); items[i].click(); return; }
+          }
+          return;
+        }
+      }
+      var dir = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[e.key];
+      if (!dir && e.key !== "Home" && e.key !== "End") return;
+      var cur = document.activeElement, inList = items.indexOf(cur) >= 0;
+      if (!inList && cur && cur !== document.body && !container.contains(cur) && !dir) return;   // Home/End elsewhere: as usual
+      e.preventDefault();
+      if (e.key === "Home") items[0].focus();
+      else if (e.key === "End") items[items.length - 1].focus();
+      else if (!inList) ((opts.start && container.querySelector(opts.start)) || items[0]).focus();
+      else { var to = nearest(cur, items, dir[0], dir[1]); if (to) to.focus(); }
+    }
+    document.addEventListener("keydown", onKey);
+    return { stop: function () { document.removeEventListener("keydown", onKey); } };
+  }
+
   window.EduGame = {
     version: VERSION,
     MAX_SAVE: MAX_SAVE,
@@ -1455,6 +1592,10 @@
     addOption: addOption,
     option: option,
     openOptions: openOptions,
+    // accessibility
+    say: say,
+    dialog: dialog,
+    arrowNav: arrowNav,
     // content
     load: load,
     loadLanguage: loadLanguage,

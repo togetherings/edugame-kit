@@ -65,6 +65,11 @@ EduGame.site();                 // {language, package, home, next, links, langua
 EduGame.goTo(EduGame.site().next);   // another page of the site (also in its one-page offline copy)
 // <section data-eg="get"></section> on a site's page: the helper fills in "Use it in your school"
 
+// Accessibility (see ACCESSIBILITY.md)
+EduGame.say("Find Ghana");                       // screen readers read it out ({urgent: true} interrupts)
+var help = EduGame.dialog(panel, { close: closeButton });   // help.open(): holds the keyboard; Escape closes
+EduGame.arrowNav(levelList, "button");           // arrow keys between buttons; Home, End; {numbers: true}: 1-9
+
 // Only do something on the Kolibri Games games page (safe to call anywhere):
 EduGame.move("guess", { value: 42 });   // coaches see every move
 EduGame.scoreboard({ board: "en-02" }); // Promise of {rows: [...], board, boards}, or null elsewhere
