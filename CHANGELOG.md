@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.3.11
+
+### What games need to do
+
+- Nothing.
+
+### Changes
+
+- **Fixed: `edugame kolibri-test` broke its own Kolibri when it played four or more packages.** It read and damaged
+  the learner's record by starting a second Kolibri (`kolibri manage shell`) while the first was running; each one
+  culls the process cache they share as it starts, and after a dozen of those the running Kolibri found its cache
+  "malformed" and answered Learn with errors (500), so the fourth package's "no errors on the page" check failed,
+  whatever the package (SINGE, with Asia as its fourth). The record is now read and damaged straight in Kolibri's
+  database (`read_record` and `damage_record` in `kolibri_test.py`, with sqlite3), so no second Kolibri runs while it
+  plays. `edugame/kolibri/read_record.py` and `damage_record.py` are gone; `setup_channel.py` still runs inside
+  Kolibri, before it starts.
+
 ## 0.3.10
 
 ### What games need to do

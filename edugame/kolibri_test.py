@@ -38,12 +38,16 @@ js(expression), wait_for(expression), click(selector), fill(selector, text), tex
 press(*keys), hold(key, ms), check(condition, what), shot(name), expect_complete.
 
 Standard library only, apart from Playwright (imported when this runs). Kolibri runs as its own
-command; the scripts in edugame/kolibri/ run inside it (kolibri manage shell).
+command; setup_channel.py in edugame/kolibri/ runs inside it (kolibri manage shell) before Kolibri starts.
+While Kolibri is running, what it recorded is read and damaged straight in its database (sqlite3): a
+second Kolibri process (kolibri manage shell) culls the process cache Kolibri shares with it as it starts,
+and after a dozen of those the running Kolibri found its cache "malformed" and answered with errors (500).
 """
 import importlib.util
 import json
 import os
 import shutil
+import sqlite3
 import subprocess
 import sys
 import tempfile
@@ -139,10 +143,63 @@ class Kolibri:
             self.started = False
 
     def record(self, channel):
-        return self.shell("read_record.py", EDUGAME_CONTENT_ID=channel["content_id"], EDUGAME_LEARNER=LEARNER)
+        return read_record(os.path.join(self.home, "db.sqlite3"), LEARNER, channel["content_id"])
 
     def damage(self, channel):
-        return self.shell("damage_record.py", EDUGAME_CONTENT_ID=channel["content_id"], EDUGAME_LEARNER=LEARNER)["damaged"]
+        return damage_record(os.path.join(self.home, "db.sqlite3"), LEARNER, channel["content_id"])
+
+
+# ----------------------------------------------------------- what Kolibri recorded, in its database
+# Kolibri's HTML5 viewer keeps what a game sends through SCORM in the learner's ContentSummaryLog
+# (extra_fields.contentState.SCORM.cmi). These read and change it with sqlite3, without starting Kolibri.
+
+def _summary_log(db, username, content_id):
+    return db.execute(
+        "SELECT l.id, l.progress, l.time_spent, l.extra_fields FROM logger_contentsummarylog l"
+        " JOIN kolibriauth_facilityuser u ON u.id = l.user_id WHERE u.username = ? AND l.content_id = ?",
+        (username, content_id.replace("-", ""))).fetchone()
+
+
+def _cmi(extra):
+    return (((extra or {}).get("contentState") or {}).get("SCORM") or {}).get("cmi") or {}
+
+
+def read_record(db_path, username, content_id):
+    """What Kolibri recorded about a learner and a resource: found, progress, time_spent, status, exit,
+    score_raw and suspend_data."""
+    db = sqlite3.connect(db_path, timeout=30)
+    try:
+        row = _summary_log(db, username, content_id)
+    finally:
+        db.close()
+    out = {"found": row is not None}
+    if row is not None:
+        cmi = _cmi(json.loads(row[3] or "{}"))
+        core = cmi.get("core") or {}
+        out.update({"progress": row[1], "time_spent": row[2], "status": core.get("lesson_status"),
+                    "exit": core.get("exit"), "score_raw": (core.get("score") or {}).get("raw"),
+                    "suspend_data": cmi.get("suspend_data") or ""})
+    return out
+
+
+def damage_record(db_path, username, content_id):
+    """Cuts the learner's SCORM suspend_data in half, as a save cut off on its way would be. Returns what
+    it is now."""
+    db = sqlite3.connect(db_path, timeout=30)
+    try:
+        row = _summary_log(db, username, content_id)
+        if row is None:
+            raise Failed("no record of the learner to damage")
+        extra = json.loads(row[3] or "{}") or {}
+        cmi = extra.setdefault("contentState", {}).setdefault("SCORM", {}).setdefault("cmi", {})
+        text = cmi.get("suspend_data") or ""
+        cmi["suspend_data"] = text[: max(1, len(text) // 2)]
+        db.execute("UPDATE logger_contentsummarylog SET extra_fields = ?, _morango_dirty_bit = 1 WHERE id = ?",
+                   (json.dumps(extra), row[0]))
+        db.commit()
+    finally:
+        db.close()
+    return cmi["suspend_data"]
 
 
 # ----------------------------------------------------------- the game in Learn

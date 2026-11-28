@@ -23,7 +23,7 @@ permissions:
 jobs:
   kit:
     name: Kit
-    uses: togetherings/edugame-kit/.github/workflows/game.yml@v0.3.10
+    uses: togetherings/edugame-kit/.github/workflows/game.yml@v0.3.11
     # with:
     #   tests: node tests/run-tests.js     # the game's own tests, if it has any
     #   browser-tests: python -m tests.e2e_browser --screenshots screenshots   # ... and browser tests (Playwright)
