@@ -21,7 +21,8 @@ and is the example to copy from.
 - **Checks for your browser test**: `edugame.testing` (below).
 - **Three more helpers** (docs/HELPER.md has the full list of calls):
   - `EduGame.say(text)`: screen readers read the text out. Use it for the prompt, for right and wrong answers, and
-    for anything else that changes on the screen without the keyboard moving. `{urgent: true}` interrupts.
+    for anything else that changes on the screen without the keyboard moving. `{urgent: true}` interrupts. Things
+    said at the same moment (a wrong answer, then the place's name) are read together.
   - `EduGame.dialog(el, {close, focus})` → `{open(), close(), isOpen()}`: a panel (help, information, a big
     picture) that holds the keyboard while it's open. Tab stays inside, Escape and a click on its backdrop close
     it, and the keyboard goes back to whatever had it. It marks the panel as a dialog for screen readers.
@@ -62,7 +63,7 @@ EduGame.addKeys({ id: "board", title: "keys.on_board", when: function () { retur
 - The kit leaves keys alone in form fields, in the Options panel and in any open dialog, and Escape closes an open
   dialog before anything else, so a game's own Escape (back to the menu) only runs when nothing is open.
 - `hint`: the line shows for 8 seconds the first time one of the part's keys is pressed on the page (not for rows
-  with `hint: false`). `EduGame.showKeyHint(word)` shows a line whenever you like.
+  with `hint: false`). It can be a function giving the word key, or nothing when no hint is wanted at that moment. `EduGame.showKeyHint(word)` shows a line whenever you like.
 - `EduGame.openKeys()` opens the list from your own button (when `options.header` is false there's no header).
 
 ### Colour starting points

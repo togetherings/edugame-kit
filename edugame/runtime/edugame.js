@@ -1492,8 +1492,8 @@
   // Small helpers for keyboard and screen-reader play (docs/ACCESSIBILITY.md).
 
   // say(text): screen readers read the text out (a hidden "live region"). {urgent: true} interrupts what they're
-  // reading. Saying the same text twice reads it twice.
-  var sayAreas = {};
+  // reading. Saying the same text twice reads it twice; things said at the same moment are read together.
+  var sayAreas = {}, sayWaiting = {};
   function say(text, opts) {
     var urgent = !!(opts && opts.urgent), area = sayAreas[urgent ? "a" : "p"];
     if (!area) {
@@ -1505,8 +1505,11 @@
       (document.body || document.documentElement).appendChild(area);
       sayAreas[urgent ? "a" : "p"] = area;
     }
+    var which = urgent ? "a" : "p", line = text == null ? "" : String(text);
+    if (sayWaiting[which] !== undefined) { if (line) sayWaiting[which] += (sayWaiting[which] ? " " : "") + line; return; }
+    sayWaiting[which] = line;
     area.textContent = "";
-    setTimeout(function () { area.textContent = text == null ? "" : String(text); }, 30);
+    setTimeout(function () { area.textContent = sayWaiting[which]; sayWaiting[which] = undefined; }, 30);
   }
 
   function focusables(root) {
@@ -1613,7 +1616,8 @@
   // addKeys(part): a game's keys. The kit puts a ⌨ button beside Options, opens the list of keys with it and with ?
   // and /, and can run keys and show a hint (docs/ACCESSIBILITY.md).
   //   part = { id, title: word key for its heading, when: fn (the part is in use now; default always),
-  //            hint: word key of a line shown for a few seconds the first time one of its keys is pressed,
+  //            hint: word key of a line shown for a few seconds the first time one of its keys is pressed
+  //                  (or a function giving the word key, or nothing when no hint is wanted now),
   //            keys: [ { keys: ["Tab"], label: "keys.k_tab", does: "keys.t_tab" },          the game handles it
   //                    { keys: [".", ">", ";"], label, does, run: fn(e), when: fn },      the kit runs it
   //                    { help: true } ] }                     where the kit's "? /  This list" row goes (default: last)
@@ -1692,7 +1696,8 @@
     for (var i = 0; i < parts.length; i++) {
       var rows = (parts[i].keys || []).filter(function (r) { return !r.help && rowOn(r) && keyMatches(r, e); });
       if (!rows.length) continue;
-      if (parts[i].hint && !hintShown[parts[i].id || i] && rows[0].hint !== false) { hintShown[parts[i].id || i] = true; showKeyHint(parts[i].hint); }
+      var hint = typeof parts[i].hint === "function" ? parts[i].hint() : parts[i].hint;
+      if (hint && !hintShown[parts[i].id || i] && rows[0].hint !== false) { hintShown[parts[i].id || i] = true; showKeyHint(hint); }
       if (rows[0].run) { e.preventDefault(); rows[0].run(e); }
       return;
     }
